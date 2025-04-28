@@ -63,11 +63,10 @@ export default function CallRecords() {
     loadingState(true)
     
     try {
-      const AuthToken = process.env.NEXT_PUBLIC_AUTHORIZATION_TOKEN;
       const response = await fetch("https://api.vapi.ai/call", {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${AuthToken}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VAPI_API_KEY}`,
         },
       })
 
