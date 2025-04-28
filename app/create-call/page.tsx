@@ -6,12 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Trash2, Plus, ChevronLeft, Phone, User, Calendar, Clock } from "lucide-react"
+import { Trash2, Plus, ChevronLeft, Phone, User } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { format } from "date-fns"
 
 interface Contact {
   id: string
@@ -22,9 +19,6 @@ interface Contact {
 export default function CreateCall() {
   const [contacts, setContacts] = useState<Contact[]>([{ id: "1", name: "", number: "" }])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined)
-  const [scheduledTime, setScheduledTime] = useState<string>("12:00")
-  const [isScheduled, setIsScheduled] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -48,13 +42,6 @@ export default function CreateCall() {
     setContacts(contacts.map((contact) => (contact.id === id ? { ...contact, [field]: value } : contact)))
   }
 
-  const formatScheduledDateTime = () => {
-    if (!scheduledDate) return null
-    
-    const date = format(scheduledDate, "MMM dd, yyyy")
-    return `${date} at ${scheduledTime}`
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -70,16 +57,6 @@ export default function CreateCall() {
       return
     }
 
-    // Validate scheduled date if enabled
-    if (isScheduled && !scheduledDate) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a date for scheduled calls",
-        variant: "destructive",
-      })
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
@@ -89,22 +66,11 @@ export default function CreateCall() {
         number: contact.number,
       }))
 
-      // Prepare scheduling data if enabled
-      let schedulingData = {}
-      if (isScheduled && scheduledDate) {
-        const [hours, minutes] = scheduledTime.split(':').map(Number)
-        const scheduledDateTime = new Date(scheduledDate)
-        scheduledDateTime.setHours(hours, minutes, 0, 0)
-        
-        schedulingData = {
-          scheduledTime: scheduledDateTime.toISOString()
-        }
-      }
-
+      const AuthToken = process.env.NEXT_PUBLIC_AUTHORIZATION_TOKEN;
       const response = await fetch("https://api.vapi.ai/call", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VAPI_API_KEY}`,
+          Authorization: `Bearer ${AuthToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -115,7 +81,6 @@ export default function CreateCall() {
             twilioAuthToken: process.env.NEXT_PUBLIC_TWILIO_AUTH_TOKEN,
           },
           customers: customersData,
-          ...schedulingData
         }),
       })
 
@@ -128,9 +93,7 @@ export default function CreateCall() {
 
       toast({
         title: "Success",
-        description: isScheduled 
-          ? `Calls have been scheduled for ${formatScheduledDateTime()}`
-          : "Calls have been initiated successfully",
+        description: "Calls have been initiated successfully",
       })
 
       // Navigate to call records page
@@ -176,75 +139,6 @@ export default function CreateCall() {
           
           <form onSubmit={handleSubmit}>
             <CardContent className="px-8 py-6 space-y-6">
-              {/* Scheduling Options */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                    <h3 className="font-medium text-lg text-gray-800">Call Scheduling</h3>
-                  </div>
-                  <div className="flex items-center">
-                    <Label htmlFor="scheduled-toggle" className="mr-3 text-sm text-gray-600">
-                      Schedule for later
-                    </Label>
-                    <input
-                      id="scheduled-toggle"
-                      type="checkbox"
-                      checked={isScheduled}
-                      onChange={(e) => setIsScheduled(e.target.checked)}
-                      className="toggle-checkbox h-6 w-11 rounded-full bg-gray-300 cursor-pointer appearance-none transition-colors duration-200 ease-in-out relative checked:bg-blue-500 before:content-[''] before:absolute before:h-5 before:w-5 before:left-0.5 before:top-0.5 before:bg-white before:rounded-full before:shadow before:transition-transform before:duration-200 before:ease-in-out checked:before:translate-x-5"
-                    />
-                  </div>
-                </div>
-
-                {isScheduled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-gray-700">
-                        <Calendar className="h-4 w-4" />
-                        Date
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal h-11 focus-visible:ring-primary"
-                          >
-                            {scheduledDate ? (
-                              format(scheduledDate, "PPP")
-                            ) : (
-                              <span className="text-muted-foreground">Select a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={scheduledDate}
-                            onSelect={setScheduledDate}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduled-time" className="flex items-center gap-2 text-gray-700">
-                        <Clock className="h-4 w-4" />
-                        Time
-                      </Label>
-                      <Input
-                        id="scheduled-time"
-                        type="time"
-                        value={scheduledTime}
-                        onChange={(e) => setScheduledTime(e.target.value)}
-                        className="focus-visible:ring-primary h-11"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
               <div className="space-y-5">
                 {contacts.map((contact, index) => (
                   <div 
@@ -333,21 +227,12 @@ export default function CreateCall() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {isScheduled ? 'Scheduling Calls...' : 'Initiating Calls...'}
+                    Initiating Calls...
                   </>
                 ) : (
                   <span className="flex items-center gap-2">
-                    {isScheduled ? (
-                      <>
-                        <Calendar className="h-4 w-4" />
-                        Schedule Calls
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="h-4 w-4" />
-                        Start Calls
-                      </>
-                    )}
+                    <Phone className="h-4 w-4" />
+                    Start Calls
                   </span>
                 )}
               </Button>
