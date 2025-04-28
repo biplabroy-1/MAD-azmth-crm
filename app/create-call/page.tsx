@@ -66,11 +66,10 @@ export default function CreateCall() {
         number: contact.number,
       }))
 
-      const AuthToken = process.env.NEXT_PUBLIC_AUTHORIZATION_TOKEN;
       const response = await fetch("https://api.vapi.ai/call", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${AuthToken}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VAPI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
