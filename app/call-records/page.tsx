@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { Phone, Calendar, Clock, ArrowLeft, RefreshCw, Search } from "lucide-react"
+import { Calendar, Clock, ArrowLeft, RefreshCw, Search, PhoneOff } from "lucide-react"
 import Link from "next/link"
 import CallDetailModal from "@/components/call-detail-modal"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +28,14 @@ interface CallRecord {
   updatedAt: string
   status: string
   customer: Customer
+  endedReason?: string
+  phoneCallProvider?: string
+  phoneCallProviderId?: string
+  phoneCallTransport?: string
+  phoneNumber?: {
+    twilioPhoneNumber: string
+    twilioAccountSid: string
+  }
   [key: string]: any
 }
 
@@ -50,7 +58,8 @@ export default function CallRecords() {
         callRecords.filter(
           (record) =>
             record.customer?.number?.includes(searchTerm) ||
-            record.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            record.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            record.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
         )
       )
     } else {
@@ -61,28 +70,25 @@ export default function CallRecords() {
   const fetchCallRecords = async () => {
     const loadingState = callRecords.length > 0 ? setIsRefreshing : setIsLoading
     loadingState(true)
-    
+
     try {
-      const response = await fetch("https://api.vapi.ai/call", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VAPI_API_KEY}`,
-        },
+      const response = await fetch('/api/call-records', {
+        method: 'GET',
       })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch call records")
+        throw new Error('Failed to fetch call records')
       }
 
       const data = await response.json()
       setCallRecords(data)
       setFilteredRecords(data)
     } catch (error) {
-      console.error("Error fetching call records:", error)
+      console.error('Error fetching call records:', error)
       toast({
-        title: "Error",
-        description: "Failed to fetch call records. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch call records. Please try again.',
+        variant: 'destructive',
       })
     } finally {
       loadingState(false)
@@ -121,9 +127,16 @@ export default function CallRecords() {
     setSelectedCall(null)
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, endedReason?: string) => {
     const statusMap: Record<string, { color: string, text: string }> = {
-      'ended': { color: 'bg-green-100 text-green-800', text: 'Completed' },
+      'ended': {
+        color: endedReason === 'customer-did-not-answer'
+          ? 'bg-orange-100 text-orange-800'
+          : 'bg-green-100 text-green-800',
+        text: endedReason === 'customer-did-not-answer'
+          ? 'No Answer'
+          : 'Completed'
+      },
       'failed': { color: 'bg-red-100 text-red-800', text: 'Failed' },
       'in-progress': { color: 'bg-blue-100 text-blue-800', text: 'In Progress' },
       'queued': { color: 'bg-yellow-100 text-yellow-800', text: 'Queued' },
@@ -142,12 +155,12 @@ export default function CallRecords() {
             {filteredRecords.length} {filteredRecords.length === 1 ? 'record' : 'records'} found
           </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or number..."
+              placeholder="Search by name, number or Twilio number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 w-full"
@@ -201,7 +214,7 @@ export default function CallRecords() {
           <Search className="h-10 w-10 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No call records found</h3>
           <p className="text-muted-foreground text-center mb-6 max-w-md">
-            {searchTerm 
+            {searchTerm
               ? "No records match your search criteria. Try a different search term."
               : "No call records available. Initiate calls to see records here."}
           </p>
@@ -227,12 +240,15 @@ export default function CallRecords() {
                     <CardDescription className="line-clamp-1">
                       {call.customer?.number || "N/A"}
                     </CardDescription>
+                    <CardDescription className="line-clamp-1 text-xs mt-1">
+                      Via: {call.phoneNumber?.twilioPhoneNumber || "N/A"}
+                    </CardDescription>
                   </div>
-                  <Badge 
-                    variant="outline" 
-                    className={getStatusBadge(call.status).color}
+                  <Badge
+                    variant="outline"
+                    className={getStatusBadge(call.status, call.endedReason).color}
                   >
-                    {getStatusBadge(call.status).text}
+                    {getStatusBadge(call.status, call.endedReason).text}
                   </Badge>
                 </div>
               </CardHeader>
@@ -250,6 +266,12 @@ export default function CallRecords() {
                       Duration: {formatDuration(call.startedAt, call.endedAt)}
                     </span>
                   </div>
+                  {call.endedReason === 'customer-did-not-answer' && (
+                    <div className="flex items-center text-orange-600">
+                      <PhoneOff className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="text-sm">Customer did not answer</span>
+                    </div>
+                  )}
                   {call.summary && (
                     <div className="pt-2 border-t mt-2">
                       <p className="text-sm text-muted-foreground line-clamp-2">

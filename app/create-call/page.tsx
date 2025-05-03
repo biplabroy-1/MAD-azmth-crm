@@ -10,7 +10,7 @@ import { Trash2, Plus, ChevronLeft, Phone, User, Upload, FileText } from "lucide
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import Papa from 'papaparse'
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -50,7 +50,7 @@ export default function CreateCall() {
   const [numberColumn, setNumberColumn] = useState<string | undefined>()
   const [previewData, setPreviewData] = useState<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const router = useRouter()
   const { toast } = useToast()
 
@@ -82,7 +82,7 @@ export default function CreateCall() {
     reader.onload = (event) => {
       try {
         const csvText = event.target?.result as string
-        
+
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
@@ -94,9 +94,9 @@ export default function CreateCall() {
               const headers = (results.meta.fields || [])
                 .map(header => header?.trim())
                 .filter(header => header && header !== '')
-              
+
               setHeaders(headers)
-              
+
               // Clean up data to handle whitespace issues
               const dataRows = (results.data as any[]).map(row => {
                 const cleanRow: any = {}
@@ -115,32 +115,32 @@ export default function CreateCall() {
                 })
                 return cleanRow
               })
-              
+
               setCsvData(dataRows)
               setPreviewData(dataRows.slice(0, 5)) // Show first 5 rows for preview
-              
+
               // Try to automatically find name and phone columns
-              const nameColumnIndex = headers.findIndex(header => 
-                header.toLowerCase().includes('name') || 
+              const nameColumnIndex = headers.findIndex(header =>
+                header.toLowerCase().includes('name') ||
                 header.toLowerCase().includes('contact')
               )
-              
-              const phoneColumnIndex = headers.findIndex(header => 
-                header.toLowerCase().includes('phone') || 
-                header.toLowerCase().includes('mobile') || 
+
+              const phoneColumnIndex = headers.findIndex(header =>
+                header.toLowerCase().includes('phone') ||
+                header.toLowerCase().includes('mobile') ||
                 header.toLowerCase().includes('no.') ||
-                header.toLowerCase().includes('number') || 
+                header.toLowerCase().includes('number') ||
                 header.toLowerCase().includes('cell')
               )
-              
+
               if (nameColumnIndex !== -1) {
                 setNameColumn(headers[nameColumnIndex])
               }
-              
+
               if (phoneColumnIndex !== -1) {
                 setNumberColumn(headers[phoneColumnIndex])
               }
-              
+
               setIsDialogOpen(true)
             } else {
               toast({
@@ -150,7 +150,7 @@ export default function CreateCall() {
               })
             }
           },
-          error: (error) => {
+          error: (error: any) => {
             console.error("Error parsing CSV:", error)
             toast({
               title: "File error",
@@ -168,7 +168,7 @@ export default function CreateCall() {
         })
       }
     }
-    
+
     reader.onerror = () => {
       toast({
         title: "File error",
@@ -176,7 +176,7 @@ export default function CreateCall() {
         variant: "destructive",
       })
     }
-    
+
     reader.readAsText(file)
   }
 
@@ -189,36 +189,36 @@ export default function CreateCall() {
       })
       return
     }
-    
+
     // Check if we have a country code column
-    const countryCodeColumn = headers.find(header => 
-      header.toLowerCase().includes('country') && 
+    const countryCodeColumn = headers.find(header =>
+      header.toLowerCase().includes('country') &&
       header.toLowerCase().includes('code')
     )
-    
+
     // Import contacts from CSV
     const newContacts = csvData
       .filter(row => row[nameColumn] !== undefined) // Filter out rows with missing name data
       .map(row => {
         // Get the name value and trim any whitespace
         const name = String(row[nameColumn] || '').trim()
-        
+
         // Handle phone number formatting
         let number = String(row[numberColumn] || '').trim()
-        
+
         // If we have a country code column, try to format the number properly
         if (countryCodeColumn && row[countryCodeColumn] !== undefined) {
           const countryCode = String(row[countryCodeColumn] || '').trim().replace(/[^0-9+]/g, '')
           const phoneNumber = number.replace(/[^0-9]/g, '')
-          
+
           // Format with proper "+" prefix if needed
           if (countryCode) {
-            number = countryCode.startsWith('+') 
-              ? `${countryCode}${phoneNumber}` 
+            number = countryCode.startsWith('+')
+              ? `${countryCode}${phoneNumber}`
               : `+${countryCode}${phoneNumber}`
           }
         }
-        
+
         return {
           id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
           name,
@@ -226,7 +226,7 @@ export default function CreateCall() {
         }
       })
       .filter(contact => contact.name && contact.number) // Ensure both name and number exist
-    
+
     if (newContacts.length === 0) {
       toast({
         title: "No valid contacts",
@@ -235,16 +235,16 @@ export default function CreateCall() {
       })
       return
     }
-    
+
     // Replace existing contacts with imported ones
     setContacts(newContacts)
     setIsDialogOpen(false)
-    
+
     toast({
       title: "Import successful",
       description: `Imported ${newContacts.length} contacts from the CSV file`,
     })
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -252,78 +252,72 @@ export default function CreateCall() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // Validate contacts
-    const invalidContacts = contacts.filter((contact) => !contact.name || !contact.number)
+    const invalidContacts = contacts.filter((contact) => !contact.name || !contact.number);
 
     if (invalidContacts.length > 0) {
       toast({
         title: "Validation Error",
         description: "All contacts must have a name and phone number",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Format contacts for API
       const customersData = contacts.map((contact) => ({
         name: contact.name,
         number: contact.number,
-      }))
+      }));
 
-      const response = await fetch("https://api.vapi.ai/call", {
+      const response = await fetch("/api/create-calls", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VAPI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          assistantId: process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID,
-          phoneNumber: {
-            twilioAccountSid: process.env.NEXT_PUBLIC_TWILIO_ACCOUNT_SID,
-            twilioPhoneNumber: process.env.NEXT_PUBLIC_TWILIO_PHONE_NUMBER,
-            twilioAuthToken: process.env.NEXT_PUBLIC_TWILIO_AUTH_TOKEN,
-          },
-          customers: customersData,
+          contacts: customersData,
         }),
-      })
+      });
+      const data = await response.json();
+      console.log(data);
 
       if (!response.ok) {
-        throw new Error("Failed to create calls")
+        throw new Error("Failed to create calls");
       }
 
-      const data = await response.json()
-      console.log("API Response:", data)
+      console.log("API Response:", data);
 
       toast({
         title: "Success",
         description: "Calls have been initiated successfully",
-      })
+      });
 
       // Navigate to call records page
-      router.push("/call-records")
+      router.push("/call-records");
     } catch (error) {
-      console.error("Error creating calls:", error)
+      console.error("Error creating calls:", error);
       toast({
         title: "Error",
         description: "Failed to create calls. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => router.push("/")}
             className="group flex items-center gap-1 text-muted-foreground hover:text-primary"
           >
@@ -344,7 +338,7 @@ export default function CreateCall() {
               Add contacts below to initiate voice calls through our system
             </p>
           </CardHeader>
-          
+
           <form onSubmit={handleSubmit}>
             <CardContent className="px-8 py-6 space-y-6">
               <div className="mb-6">
@@ -365,7 +359,7 @@ export default function CreateCall() {
                       className="hidden"
                       id="csv-upload"
                     />
-                    <Button 
+                    <Button
                       type="button"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
@@ -380,14 +374,14 @@ export default function CreateCall() {
 
               <div className="space-y-5">
                 {contacts.map((contact, index) => (
-                  <div 
-                    key={contact.id} 
+                  <div
+                    key={contact.id}
                     className="p-6 border border-gray-200 rounded-xl bg-white relative transition-all hover:shadow-sm group"
                   >
                     <div className="absolute right-4 top-4">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
+                      <Button
+                        type="button"
+                        variant="ghost"
                         size="sm"
                         onClick={() => removeContact(contact.id)}
                         className="text-gray-400 hover:text-destructive rounded-full h-8 w-8 p-0"
@@ -395,14 +389,14 @@ export default function CreateCall() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex items-center mb-5">
                       <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary font-medium mr-3">
                         <span className="text-sm">{index + 1}</span>
                       </div>
                       <h3 className="font-medium text-lg text-gray-800">Contact Information</h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div className="space-y-2">
                         <Label htmlFor={`name-${contact.id}`} className="flex items-center gap-2 text-gray-700">
@@ -435,9 +429,9 @@ export default function CreateCall() {
                 ))}
               </div>
 
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={addContact}
                 className="w-full border-dashed hover:bg-primary/5 h-12 text-gray-600 hover:text-primary"
               >
@@ -447,16 +441,16 @@ export default function CreateCall() {
             </CardContent>
 
             <CardFooter className="bg-gray-50 px-8 py-5 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => router.push("/")}
                 className="w-full sm:w-auto h-11"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
                 className="w-full sm:w-auto h-11 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-md"
               >
@@ -489,7 +483,7 @@ export default function CreateCall() {
               Select which columns to use for contact names and phone numbers
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -507,7 +501,7 @@ export default function CreateCall() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="number-column" className="mb-2 block">Phone Number Column</Label>
                 <Select value={numberColumn} onValueChange={setNumberColumn}>
@@ -524,7 +518,7 @@ export default function CreateCall() {
                 </Select>
               </div>
             </div>
-            
+
             <div>
               <h3 className="font-medium text-sm text-gray-700 mb-2">Preview (First 5 rows)</h3>
               <div className="border rounded-md overflow-hidden">
@@ -532,11 +526,10 @@ export default function CreateCall() {
                   <TableHeader>
                     <TableRow>
                       {headers.map((header, index) => (
-                        <TableHead key={index} className={`${
-                          header === nameColumn || header === numberColumn 
-                            ? 'bg-primary/10 text-primary' 
-                            : ''
-                        }`}>
+                        <TableHead key={index} className={`${header === nameColumn || header === numberColumn
+                          ? 'bg-primary/10 text-primary'
+                          : ''
+                          }`}>
                           {header}
                         </TableHead>
                       ))}
@@ -546,11 +539,10 @@ export default function CreateCall() {
                     {previewData.map((row, rowIndex) => (
                       <TableRow key={rowIndex}>
                         {headers.map((header, colIndex) => (
-                          <TableCell key={colIndex} className={`${
-                            header === nameColumn || header === numberColumn 
-                              ? 'bg-primary/5' 
-                              : ''
-                          }`}>
+                          <TableCell key={colIndex} className={`${header === nameColumn || header === numberColumn
+                            ? 'bg-primary/5'
+                            : ''
+                            }`}>
                             {row[header] !== undefined ? String(row[header]) : '-'}
                           </TableCell>
                         ))}
@@ -564,15 +556,15 @@ export default function CreateCall() {
               </p>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={importContacts}
               className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
             >
