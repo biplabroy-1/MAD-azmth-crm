@@ -1,56 +1,43 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import { Calendar, Clock, ArrowLeft, RefreshCw, Search, PhoneOff } from "lucide-react"
-import Link from "next/link"
-import CallDetailModal from "@/components/call-detail-modal"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-
-interface Customer {
-  name: string
-  number: string
-}
-
-interface CallRecord {
-  id: string
-  assistantId: string
-  type: string
-  startedAt: string
-  endedAt: string
-  transcript: string
-  summary: string
-  createdAt: string
-  updatedAt: string
-  status: string
-  customer: Customer
-  endedReason?: string
-  phoneCallProvider?: string
-  phoneCallProviderId?: string
-  phoneCallTransport?: string
-  phoneNumber?: {
-    twilioPhoneNumber: string
-    twilioAccountSid: string
-  }
-  [key: string]: any
-}
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Calendar,
+  Clock,
+  ArrowLeft,
+  RefreshCw,
+  Search,
+  PhoneOff,
+} from "lucide-react";
+import Link from "next/link";
+import CallDetailModal from "@/components/call-detail-modal";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
+import { CallRecord } from "@/types/interfaces";
 
 export default function CallRecords() {
-  const [callRecords, setCallRecords] = useState<CallRecord[]>([])
-  const [filteredRecords, setFilteredRecords] = useState<CallRecord[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const { toast } = useToast()
+  const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<CallRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchCallRecords()
-  }, [])
+    fetchCallRecords();
+  }, []);
 
   useEffect(() => {
     if (searchTerm) {
@@ -58,101 +45,64 @@ export default function CallRecords() {
         callRecords.filter(
           (record) =>
             record.customer?.number?.includes(searchTerm) ||
-            record.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            record.customer?.name
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
             record.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
         )
-      )
+      );
     } else {
-      setFilteredRecords(callRecords)
+      setFilteredRecords(callRecords);
     }
-  }, [searchTerm, callRecords])
+  }, [searchTerm, callRecords]);
 
   const fetchCallRecords = async () => {
-    const loadingState = callRecords.length > 0 ? setIsRefreshing : setIsLoading
-    loadingState(true)
+    const loadingState =
+      callRecords.length > 0 ? setIsRefreshing : setIsLoading;
+    loadingState(true);
 
     try {
-      const response = await fetch('/api/call-records', {
-        method: 'GET',
-      })
+      const response = await fetch("/api/call-records", {
+        method: "GET",
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch call records')
+        throw new Error("Failed to fetch call records");
       }
 
-      const data = await response.json()
-      setCallRecords(data)
-      setFilteredRecords(data)
+      const data = await response.json();
+      setCallRecords(data);
+      setFilteredRecords(data);
     } catch (error) {
-      console.error('Error fetching call records:', error)
+      console.error("Error fetching call records:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch call records. Please try again.',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to fetch call records. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      loadingState(false)
+      loadingState(false);
     }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatDuration = (startDate: string, endDate: string) => {
-    if (!startDate || !endDate) return "N/A"
-
-    const start = new Date(startDate).getTime()
-    const end = new Date(endDate).getTime()
-    const durationMs = end - start
-
-    const seconds = Math.floor(durationMs / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-
-    return `${minutes > 0 ? `${minutes}m ` : ''}${remainingSeconds}s`
-  }
+  };
 
   const handleCardClick = (call: CallRecord) => {
-    setSelectedCall(call)
-  }
+    setSelectedCall(call);
+  };
 
   const closeModal = () => {
-    setSelectedCall(null)
-  }
-
-  const getStatusBadge = (status: string, endedReason?: string) => {
-    const statusMap: Record<string, { color: string, text: string }> = {
-      'ended': {
-        color: endedReason === 'customer-did-not-answer'
-          ? 'bg-orange-100 text-orange-800'
-          : 'bg-green-100 text-green-800',
-        text: endedReason === 'customer-did-not-answer'
-          ? 'No Answer'
-          : 'Completed'
-      },
-      'failed': { color: 'bg-red-100 text-red-800', text: 'Failed' },
-      'in-progress': { color: 'bg-blue-100 text-blue-800', text: 'In Progress' },
-      'queued': { color: 'bg-yellow-100 text-yellow-800', text: 'Queued' },
-      'initiated': { color: 'bg-purple-100 text-purple-800', text: 'Initiated' }
-    }
-
-    return statusMap[status] || { color: 'bg-gray-100 text-gray-800', text: status }
-  }
+    setSelectedCall(null);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Call Records</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Call Records
+          </h1>
           <p className="text-muted-foreground mt-1">
-            {filteredRecords.length} {filteredRecords.length === 1 ? 'record' : 'records'} found
+            {filteredRecords.length}{" "}
+            {filteredRecords.length === 1 ? "record" : "records"} found
           </p>
         </div>
 
@@ -171,7 +121,9 @@ export default function CallRecords() {
             onClick={fetchCallRecords}
             disabled={isLoading || isRefreshing}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Link href="/" className="w-full sm:w-auto">
@@ -246,7 +198,9 @@ export default function CallRecords() {
                   </div>
                   <Badge
                     variant="outline"
-                    className={getStatusBadge(call.status, call.endedReason).color}
+                    className={
+                      getStatusBadge(call.status, call.endedReason).color
+                    }
                   >
                     {getStatusBadge(call.status, call.endedReason).text}
                   </Badge>
@@ -266,7 +220,7 @@ export default function CallRecords() {
                       Duration: {formatDuration(call.startedAt, call.endedAt)}
                     </span>
                   </div>
-                  {call.endedReason === 'customer-did-not-answer' && (
+                  {call.endedReason === "customer-did-not-answer" && (
                     <div className="flex items-center text-orange-600">
                       <PhoneOff className="h-4 w-4 mr-2 flex-shrink-0" />
                       <span className="text-sm">Customer did not answer</span>
@@ -286,7 +240,9 @@ export default function CallRecords() {
         </div>
       )}
 
-      {selectedCall && <CallDetailModal call={selectedCall} onClose={closeModal} />}
+      {selectedCall && (
+        <CallDetailModal call={selectedCall} onClose={closeModal} />
+      )}
     </div>
-  )
+  );
 }

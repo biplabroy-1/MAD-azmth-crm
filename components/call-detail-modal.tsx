@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Dialog,
@@ -7,87 +7,61 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Phone, Calendar, Clock, User, MessageSquare, X, Clock3, Hash } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-
-interface Customer {
-  name: string
-  number: string
-}
-
-interface CallRecord {
-  id: string
-  assistantId: string
-  type: string
-  startedAt: string
-  endedAt: string
-  transcript: string
-  summary: string
-  createdAt: string
-  updatedAt: string
-  status: string
-  customer: Customer
-  [key: string]: any
-}
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Phone,
+  Calendar,
+  Clock,
+  User,
+  MessageSquare,
+  X,
+  Clock3,
+  Hash,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
+import { CallRecord } from "@/types/interfaces";
 
 interface CallDetailModalProps {
-  call: CallRecord
-  onClose: () => void
+  call: CallRecord;
+  onClose: () => void;
 }
 
-export default function CallDetailModal({ call, onClose }: CallDetailModalProps) {
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A"
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatDuration = (startDate: string, endDate: string) => {
-    if (!startDate || !endDate) return "N/A"
-
-    const start = new Date(startDate).getTime()
-    const end = new Date(endDate).getTime()
-    const durationMs = end - start
-
-    const seconds = Math.floor(durationMs / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-
-    return `${minutes > 0 ? `${minutes}m ` : ''}${remainingSeconds}s`
-  }
+export default function CallDetailModal({
+  call,
+  onClose,
+}: CallDetailModalProps) {
 
   const formatTranscript = (transcript: string) => {
-    if (!transcript) return null
+    if (!transcript) return null;
 
     return transcript.split("\n").map((line, index) => {
-      const isAI = line.startsWith("AI:")
-      const isUser = line.startsWith("User:")
-      
+      const isAI = line.startsWith("AI:");
+      const isUser = line.startsWith("User:");
+
       return (
-        <div 
-          key={index} 
+        <div
+          key={index}
           className={`mb-3 p-3 rounded-lg ${
-            isAI 
+            isAI
               ? "bg-blue-50 border-l-4 border-blue-500"
               : isUser
-                ? "bg-gray-50 border-l-4 border-gray-400"
-                : ""
+              ? "bg-gray-50 border-l-4 border-gray-400"
+              : ""
           }`}
         >
           <div className="flex items-start gap-2">
-            <div className={`p-1.5 rounded-full mt-0.5 ${
-              isAI ? "bg-blue-100 text-blue-600" : 
-              isUser ? "bg-gray-100 text-gray-600" : ""
-            }`}>
+            <div
+              className={`p-1.5 rounded-full mt-0.5 ${
+                isAI
+                  ? "bg-blue-100 text-blue-600"
+                  : isUser
+                  ? "bg-gray-100 text-gray-600"
+                  : ""
+              }`}
+            >
               {isAI ? (
                 <MessageSquare className="h-4 w-4" />
               ) : isUser ? (
@@ -95,34 +69,26 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
               ) : null}
             </div>
             <div className="flex-1 break-words">
-              <p className={`text-sm font-medium mb-1 ${
-                isAI ? "text-blue-800" : 
-                isUser ? "text-gray-800" : ""
-              }`}>
+              <p
+                className={`text-sm font-medium mb-1 ${
+                  isAI ? "text-blue-800" : isUser ? "text-gray-800" : ""
+                }`}
+              >
                 {isAI ? "Assistant" : isUser ? "Customer" : ""}
               </p>
-              <p className="text-sm">{line.replace(/^(AI:|User:)/, '').trim()}</p>
+              <p className="text-sm">
+                {line.replace(/^(AI:|User:)/, "").trim()}
+              </p>
             </div>
           </div>
         </div>
-      )
-    })
-  }
-
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { color: string, text: string }> = {
-      'ended': { color: 'bg-green-100 text-green-800', text: 'Completed' },
-      'failed': { color: 'bg-red-100 text-red-800', text: 'Failed' },
-      'in-progress': { color: 'bg-blue-100 text-blue-800', text: 'In Progress' },
-      'queued': { color: 'bg-yellow-100 text-yellow-800', text: 'Queued' }
-    }
-
-    return statusMap[status] || { color: 'bg-gray-100 text-gray-800', text: status }
-  }
+      );
+    });
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] p-0 overflow-hidden md:w-4/5 sm:w-11/12">
+      <DialogContent className="max-w-4xl w-full max-h-[90vh] p-4 overflow-hidden md:w-4/5 sm:w-11/12">
         <DialogHeader className="border-b p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
             <div>
@@ -135,8 +101,11 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                 <span className="font-mono truncate">{call.id}</span>
               </DialogDescription>
             </div>
-            <Badge className={`${getStatusBadge(call.status).color} mt-1 md:mt-0`}>
-              {getStatusBadge(call.status).text}
+            <Badge
+              variant="outline"
+              className={getStatusBadge(call.status, call.endedReason).color}
+            >
+              {getStatusBadge(call.status, call.endedReason).text}
             </Badge>
           </div>
         </DialogHeader>
@@ -157,7 +126,9 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Name</p>
-                      <p className="font-medium">{call.customer?.name || "Unknown"}</p>
+                      <p className="font-medium">
+                        {call.customer?.name || "Unknown"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -165,8 +136,12 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                       <Phone className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Phone Number</p>
-                      <p className="font-medium">{call.customer?.number || "N/A"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Phone Number
+                      </p>
+                      <p className="font-medium">
+                        {call.customer?.number || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -183,8 +158,12 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                       <Calendar className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Started At</p>
-                      <p className="font-medium">{formatDate(call.startedAt)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Started At
+                      </p>
+                      <p className="font-medium">
+                        {formatDate(call.startedAt)}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -202,7 +181,9 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">{formatDuration(call.startedAt, call.endedAt)}</p>
+                      <p className="font-medium">
+                        {formatDuration(call.startedAt, call.endedAt)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -238,7 +219,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
         </div>
 
         <DialogFooter className="border-t p-4 mt-auto">
-          <Button 
+          <Button
             onClick={onClose}
             variant="outline"
             className="flex items-center gap-2 w-full md:w-auto"
@@ -249,5 +230,5 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
