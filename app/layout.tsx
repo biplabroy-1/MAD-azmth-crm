@@ -1,25 +1,46 @@
-"use client"
-
-import { useEffect } from "react"
 import "./globals.css"
+import { Geist, Geist_Mono } from 'next/font/google'
+import {
+  ClerkProvider,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from '@clerk/nextjs'
+
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+})
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+})
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // This helps prevent hydration errors by ensuring the body attributes are 
-  // consistently applied both server and client side
-  useEffect(() => {
-    // We need to run this only once on client-side after hydration
-    // This is ignored during server-side rendering
-  }, [])
 
   return (
+    <ClerkProvider>
     <html lang="en">
-      <body suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+        <header className="flex justify-end items-center p-4 gap-4 h-16">
+          <SignedOut>
+            <SignInButton forceRedirectUrl="/auth-callback" signUpForceRedirectUrl="/auth-callback"/>
+            <SignUpButton signInForceRedirectUrl="/auth-callback"/>
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+        </header>
         {children}
       </body>
     </html>
+  </ClerkProvider>
   )
 }
