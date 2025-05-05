@@ -154,25 +154,6 @@ export default function Dashboard() {
                 </Card>
             </div>
 
-            {/* Status Chart */}
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle>Call Status Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Bar
-                        data={getCallStatusData()}
-                        options={{
-                            responsive: true,
-                            plugins: {
-                                legend: { position: "top" },
-                                title: { display: true, text: "Call Status Distribution" },
-                            },
-                        }}
-                    />
-                </CardContent>
-            </Card>
-
             {/* Recent Calls */}
             <Card>
                 <CardHeader>
