@@ -1,10 +1,15 @@
+
+"use client"
 import Link from "next/link"
+import { useAuth, SignInButton, SignUpButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Phone, PhoneCall, ListOrdered, ChevronRight } from "lucide-react"
+import { Phone, PhoneCall, ListOrdered, ChevronRight, LogIn } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 export default function Home() {
+  const { isSignedIn } = useAuth()
+
   return (
     <div className="container mx-auto px-4 py-8 sm:py-12">
       <div className="max-w-6xl mx-auto">
@@ -55,12 +60,23 @@ export default function Home() {
               </ul>
             </CardContent>
             <CardFooter>
-              <Link href="/create-call" className="w-full">
-                <Button className="w-full group-hover:shadow-md transition-all">
-                  Get Started
-                  <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+              {isSignedIn ? (
+                <Link href="/create-call" className="w-full">
+                  <Button className="w-full group-hover:shadow-md transition-all">
+                    Get Started
+                    <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+              ) : (
+                <div className="w-full">
+                  <SignInButton mode="modal">
+                    <Button className="w-full group-hover:shadow-md transition-all">
+                      Sign In to Get Started
+                      <LogIn className="h-4 w-4 ml-2" />
+                    </Button>
+                  </SignInButton>
+                </div>
+              )}
             </CardFooter>
           </Card>
 
@@ -96,12 +112,23 @@ export default function Home() {
               </ul>
             </CardContent>
             <CardFooter>
-              <Link href="/call-records" className="w-full">
-                <Button variant="outline" className="w-full group-hover:shadow-md transition-all">
-                  View Records
-                  <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+              {isSignedIn ? (
+                <Link href="/call-records" className="w-full">
+                  <Button variant="outline" className="w-full group-hover:shadow-md transition-all">
+                    View Records
+                    <ChevronRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+              ) : (
+                <div className="w-full">
+                  <SignInButton mode="modal">
+                    <Button variant="outline" className="w-full group-hover:shadow-md transition-all">
+                      Sign In to View
+                      <LogIn className="h-4 w-4 ml-2" />
+                    </Button>
+                  </SignInButton>
+                </div>
+              )}
             </CardFooter>
           </Card>
         </div>

@@ -20,6 +20,8 @@ import {
   User,
   Upload,
   FileText,
+  AlertCircle,
+  Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -47,17 +49,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TwilioConfigModal from "@/components/TwilioConfig";
 
 interface Contact {
   id: string;
   name: string;
   number: string;
+  hasCountryCode: boolean;
 }
 
 export default function CreateCall() {
   const [contacts, setContacts] = useState<Contact[]>([
-    { id: "1", name: "", number: "" },
+    { id: "1", name: "", number: "", hasCountryCode: false },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,15 +70,23 @@ export default function CreateCall() {
   const [nameColumn, setNameColumn] = useState<string | undefined>();
   const [numberColumn, setNumberColumn] = useState<string | undefined>();
   const [previewData, setPreviewData] = useState<any[]>([]);
+  const [contactsWithMissingCountryCode, setContactsWithMissingCountryCode] = useState<any[]>([]);
+  const [showValidationWarning, setShowValidationWarning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
   const { toast } = useToast();
 
+  // Validate if a phone number has a country code
+  const hasCountryCode = (number: string): boolean => {
+    // Check if number starts with + followed by digits
+    return /^\+\d/.test(number.trim());
+  };
+
   const addContact = () => {
     setContacts([
       ...contacts,
-      { id: Date.now().toString(), name: "", number: "" },
+      { id: Date.now().toString(), name: "", number: "", hasCountryCode: false },
     ]);
   };
 
@@ -97,7 +109,13 @@ export default function CreateCall() {
   ) => {
     setContacts(
       contacts.map((contact) =>
-        contact.id === id ? { ...contact, [field]: value } : contact
+        contact.id === id ? 
+        { 
+          ...contact, 
+          [field]: value,
+          // Update hasCountryCode when modifying the number
+          ...((field === "number") ? { hasCountryCode: hasCountryCode(value) } : {})
+        } : contact
       )
     );
   };
@@ -254,10 +272,10 @@ export default function CreateCall() {
         }
 
         return {
-          id:
-            Date.now().toString() + Math.random().toString(36).substring(2, 9),
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
           name,
           number,
+          hasCountryCode: hasCountryCode(number)
         };
       })
       .filter((contact) => contact.name && contact.number); // Ensure both name and number exist
@@ -271,14 +289,24 @@ export default function CreateCall() {
       return;
     }
 
+    // Check for missing country codes
+    const missing = newContacts.filter(contact => !contact.hasCountryCode);
+    
+    // Set missing country code contacts for display
+    setContactsWithMissingCountryCode(missing);
+    
+    // Show validation warning if any contacts are missing country codes
+    setShowValidationWarning(missing.length > 0);
+
     // Replace existing contacts with imported ones
     setContacts(newContacts);
     setIsDialogOpen(false);
 
     toast({
-      title: "Import successful",
-      description: `Imported ${newContacts.length} contacts from the CSV file`,
-    });
+          title: "Import successful",
+          description: `Imported ${newContacts.length} contacts from the CSV file${missing.length > 0 ? '. Some contacts are missing country codes.' : ''}`,
+          ...(missing.length > 0 ? { variant: "default" } : {})
+        });
 
     // Reset file input
     if (fileInputRef.current) {
@@ -303,6 +331,22 @@ export default function CreateCall() {
       return;
     }
 
+    // Check for missing country codes
+    const contactsMissingCountryCode = contacts.filter(
+      (contact) => !hasCountryCode(contact.number)
+    );
+
+    if (contactsMissingCountryCode.length > 0) {
+      toast({
+        title: "Missing Country Codes",
+        description: `${contactsMissingCountryCode.length} contacts are missing country codes. Please add country codes (e.g., +1) to all phone numbers.`,
+        variant: "destructive",
+      });
+      setContactsWithMissingCountryCode(contactsMissingCountryCode);
+      setShowValidationWarning(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -322,13 +366,10 @@ export default function CreateCall() {
         }),
       });
       const data = await response.json();
-      console.log(data);
 
       if (!response.ok) {
         throw new Error("Failed to create calls");
       }
-
-      console.log("API Response:", data);
 
       toast({
         title: "Success",
@@ -366,6 +407,28 @@ export default function CreateCall() {
           </Badge>
         </div>
 
+        {showValidationWarning && contactsWithMissingCountryCode.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Country Codes Required</AlertTitle>
+            <AlertDescription>
+              <p className="mb-2">
+                {contactsWithMissingCountryCode.length} {contactsWithMissingCountryCode.length === 1 ? "contact is" : "contacts are"} missing country codes.
+                Please add country codes (e.g., +1) to all phone numbers.
+              </p>
+              {contactsWithMissingCountryCode.length <= 5 && (
+                <ul className="list-disc pl-5 text-sm">
+                  {contactsWithMissingCountryCode.map((contact, index) => (
+                    <li key={index}>
+                      {contact.name}: {contact.number}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="shadow-xl border-0">
           <CardHeader className="border-b border-gray-200 px-8 py-6">
             <CardTitle className="text-3xl font-semibold text-gray-900 mb-2">
@@ -385,7 +448,7 @@ export default function CreateCall() {
                       Import Contacts from CSV
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Upload a CSV file to import multiple contacts at once
+                      Upload a CSV file to import multiple contacts at once. Make sure phone numbers include country codes (e.g., +1).
                     </p>
                   </div>
                   <div>
@@ -414,7 +477,7 @@ export default function CreateCall() {
                 {contacts.map((contact, index) => (
                   <div
                     key={contact.id}
-                    className="p-6 border border-gray-200 rounded-xl bg-white relative transition-all hover:shadow-sm group"
+                    className={`p-6 border ${!contact.hasCountryCode && contact.number ? 'border-red-200' : 'border-gray-200'} rounded-xl bg-white relative transition-all hover:shadow-sm group`}
                   >
                     <div className="absolute right-4 top-4">
                       <Button
@@ -459,10 +522,15 @@ export default function CreateCall() {
                       <div className="space-y-2">
                         <Label
                           htmlFor={`number-${contact.id}`}
-                          className="flex items-center gap-2 text-gray-700"
+                          className={`flex items-center gap-2 ${!contact.hasCountryCode && contact.number ? 'text-red-500' : 'text-gray-700'}`}
                         >
                           <Phone className="h-4 w-4" />
-                          Phone Number
+                          Phone Number (include country code)
+                          {contact.number && (
+                            contact.hasCountryCode ? 
+                            <Check className="h-4 w-4 text-green-500 ml-1" /> : 
+                            <AlertCircle className="h-4 w-4 text-red-500 ml-1" />
+                          )}
                         </Label>
                         <Input
                           id={`number-${contact.id}`}
@@ -471,8 +539,13 @@ export default function CreateCall() {
                             updateContact(contact.id, "number", e.target.value)
                           }
                           placeholder="+1 (555) 123-4567"
-                          className="focus-visible:ring-primary h-11"
+                          className={`focus-visible:ring-primary h-11 ${!contact.hasCountryCode && contact.number ? 'border-red-300 focus:border-red-500' : ''}`}
                         />
+                        {!contact.hasCountryCode && contact.number && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Missing country code (e.g., +1, +44, +91)
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -546,11 +619,20 @@ export default function CreateCall() {
           <DialogHeader>
             <DialogTitle>Import Contacts from CSV</DialogTitle>
             <DialogDescription>
-              Select which columns to use for contact names and phone numbers
+              Select which columns to use for contact names and phone numbers. Make sure phone numbers include country codes.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-600">Important</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Phone numbers must include a country code (e.g., +1 for US, +44 for UK, +91 for India).
+                Numbers without country codes will be flagged after import.
+              </AlertDescription>
+            </Alert>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name-column" className="mb-2 block">
@@ -618,7 +700,10 @@ export default function CreateCall() {
                           <TableCell
                             key={colIndex}
                             className={`${
-                              header === nameColumn || header === numberColumn
+                              header === numberColumn &&
+                              !hasCountryCode(String(row[header] || ""))
+                                ? "bg-red-50 text-red-600"
+                                : header === nameColumn || header === numberColumn
                                 ? "bg-primary/5"
                                 : ""
                             }`}
@@ -626,6 +711,13 @@ export default function CreateCall() {
                             {row[header] !== undefined
                               ? String(row[header])
                               : "-"}
+                            {header === numberColumn &&
+                              row[header] !== undefined &&
+                              !hasCountryCode(String(row[header] || "")) && (
+                                <span className="ml-2 text-xs text-red-500">
+                                  Missing country code
+                                </span>
+                              )}
                           </TableCell>
                         ))}
                       </TableRow>

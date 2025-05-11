@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const { contacts } = await request.json();
     const user = await currentUser();
-    const clerkId = user?.id; // Assuming Clerk middleware adds this header
+    const clerkId = user?.id;
 
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,10 +17,7 @@ export async function POST(request: NextRequest) {
     if (!contacts || contacts.length === 0) {
       return NextResponse.json({ error: 'No contacts provided' }, { status: 400 });
     }
-
     await connectDB();
-
-    // Assuming you have a User model and you want to fetch the user's Twilio configuration
     const userRecord = await User.findOne({ clerkId });
     if (!userRecord) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -40,9 +37,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         assistantId: process.env.VAPI_ASSISTANT_ID,
         phoneNumber: {
-          twilioAccountSid: sid,
-          twilioPhoneNumber: phoneNumber,
-          twilioAuthToken: authToken,
+          twilioAccountSid: sid || process.env.TWILIO_ACCOUNT_SID,
+          twilioPhoneNumber: phoneNumber || process.env.TWILIO_PHONE_NUMBER,
+          twilioAuthToken: authToken || process.env.TWILIO_AUTH_TOKEN,
         },
         customers: contacts,
       }),
