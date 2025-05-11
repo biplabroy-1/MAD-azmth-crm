@@ -1,28 +1,10 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export default clerkMiddleware((auth, req) => {
-  // List of protected routes
-  const protectedRoutes = [
-    '/dashboard',
-    '/call-records',
-    '/create-call',
-  ];
-  
-  // Check if the current path matches any protected route
-  const isProtectedRoute = protectedRoutes.some(route => 
-    req.nextUrl.pathname === route || 
-    req.nextUrl.pathname.startsWith(`${route}/`)
-  );
-  
-  // Allow access to unprotected routes (like root '/')
-  if (!isProtectedRoute) {
-    return NextResponse.next();
-  }
-  
-  // For protected routes, the default clerk middleware will handle authentication
-  return;
-});
+const isProtectedRoute = createRouteMatcher(['/create-call(.*)', '/call-records(.*)'])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) await auth.protect()
+})
 
 export const config = {
   matcher: [
@@ -31,4 +13,4 @@ export const config = {
     // Always run for API routes
     '/(api|trpc)(.*)',
   ],
-};
+}
