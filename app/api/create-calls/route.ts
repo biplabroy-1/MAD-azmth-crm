@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { currentUser } from '@clerk/nextjs/server';
 import connectDB from '@/lib/connectDB';
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!userRecord) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    const { twilioConfig } = userRecord;
+    const { twilioConfig,assistantId } = userRecord;
     if (!twilioConfig) {
       return NextResponse.json({ error: 'Twilio configuration not found' }, { status: 404 });
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        assistantId: process.env.VAPI_ASSISTANT_ID,
+        assistantId,
         phoneNumber: {
           twilioAccountSid: sid,
           twilioPhoneNumber: phoneNumber,

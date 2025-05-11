@@ -1,23 +1,26 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 let cachedConnection: typeof mongoose | null = null;
 
 const connectDB = async () => {
-    if (cachedConnection) {
-        console.log('Using cached database connection');
-        return cachedConnection;
+  if (cachedConnection) {
+    console.log("Using cached database connection");
+    return cachedConnection;
+  }
+
+  try {
+    const dbUri = process.env.MONGO_URI || "";
+    if (!dbUri) {
+      throw new Error("MongoDB URI not found");
     }
 
-    try {
-        const dbUri = process.env.MONGO_URI || 'mongodb+srv://book_inventory:j4tOFRpBeFrL1cP2@cluster0.mrre3.mongodb.net/devazmth1122?retryWrites=true&w=majority&appName=Cluster0';
-
-        console.log('Establishing new database connection');
-        cachedConnection = await mongoose.connect(dbUri);
-        return cachedConnection;
-    } catch (error) {
-        console.error('Database connection error:', error);
-        throw error;
-    }
+    console.log("Establishing new database connection");
+    cachedConnection = await mongoose.connect(dbUri);
+    return cachedConnection;
+  } catch (error) {
+    console.error("Database connection error:", error);
+    throw error;
+  }
 };
 
 export default connectDB;

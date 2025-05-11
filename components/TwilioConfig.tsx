@@ -67,7 +67,7 @@ export default function TwilioConfigModal() {
     };
 
     fetchTwilioConfig();
-  }, [open, user?.id, formData.sid]);
+  }, [user?.id, formData.sid]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
