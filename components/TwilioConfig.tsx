@@ -58,10 +58,19 @@ export default function TwilioConfigModal() {
               authToken: twilioConfig.authToken || "",
               phoneNumber: twilioConfig.phoneNumber || "",
             });
-            setConfigLoading(false);
+            if (!twilioConfig) {
+              toast("Info", {
+                description: "Twilio Config not found",
+              });
+            }
           }
         } catch (error) {
           console.error("Failed to fetch Twilio config:", error);
+          toast("Error", {
+            description: "Failed to fetch Twilio Config",
+          });
+        } finally {
+          setConfigLoading(false);
         }
       }
     };
