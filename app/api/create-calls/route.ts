@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         assistantId: process.env.VAPI_ASSISTANT_ID,
         phoneNumber: {
-          twilioAccountSid: sid || process.env.TWILIO_ACCOUNT_SID,
-          twilioPhoneNumber: phoneNumber || process.env.TWILIO_PHONE_NUMBER,
-          twilioAuthToken: authToken || process.env.TWILIO_AUTH_TOKEN,
+          twilioAccountSid: sid,
+          twilioPhoneNumber: phoneNumber,
+          twilioAuthToken: authToken,
         },
         customers: contacts,
       }),
