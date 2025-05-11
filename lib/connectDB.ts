@@ -9,7 +9,7 @@ const connectDB = async () => {
     }
 
     try {
-        const dbUri = process.env.MONGO_URI || 'mongodb+srv://book_inventory:j4tOFRpBeFrL1cP2@cluster0.mrre3.mongodb.net/devazmth?retryWrites=true&w=majority&appName=Cluster0';
+        const dbUri = process.env.MONGO_URI || 'mongodb+srv://book_inventory:j4tOFRpBeFrL1cP2@cluster0.mrre3.mongodb.net/devazmth1122?retryWrites=true&w=majority&appName=Cluster0';
 
         console.log('Establishing new database connection');
         cachedConnection = await mongoose.connect(dbUri);
