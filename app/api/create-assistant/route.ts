@@ -10,21 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get request body data
-    const { content } = await request.json();
-
-    if (!content) {
-      return NextResponse.json(
-        { message: "Document content is required" },
-        { status: 400 }
-      );
-    }
-
     // Fetch the user record
     const userRecord = await User.findOne({
-      clerkId: "user_2wfPmDwyfTiAxm4XWzW3ICyPiER",
+      clerkId: clerkId,
     });
-    console.log(userRecord);
 
     if (!userRecord) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -38,7 +27,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { firstName } = userRecord;
+    const { firstName,content } = userRecord;
 
     // Create Assistant (POST /assistant)
     const response = await fetch("https://api.vapi.ai/assistant", {
@@ -54,8 +43,8 @@ export async function POST(request: NextRequest) {
           temperature: 0.5,
           messages: [
             {
-              content: content, // Use the uploaded document content here
               role: "system",
+              content: content, // Use the uploaded document content here
             },
           ],
         },
@@ -114,9 +103,9 @@ export async function POST(request: NextRequest) {
         firstMessage:
           "Thank you for calling Us. This is Cognia, your scheduling assistant. How may I help you today?",
         voicemailMessage:
-          "Hello, this is Riley from Wellness Partners. I'm calling about your appointment. Please call us back at your earliest convenience so we can confirm your scheduling details.",
+          "Thank you for calling Us. This is Cognia, your scheduling assistant. How may I help you today?",
         endCallMessage:
-          "Perfect! Your appointment has been scheduled. You'll receive a confirmation email shortly. Have a great day!",
+          "Perfect! Your appointment has been scheduled. Have a great day!",
       }),
     });
 

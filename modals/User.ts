@@ -10,6 +10,7 @@ export interface IUser extends Document {
     authToken: string;
     phoneNumber: string;
   };
+  content: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const UserSchema: Schema = new Schema(
       phoneNumber: { type: String },
     },
     assistantId: { type: String },
+    content: { type: String },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt fields

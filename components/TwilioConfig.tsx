@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
+import { Textarea } from "@/components/ui/textarea";
 
 interface TwilioConfigData {
   sid: string;
@@ -30,6 +31,7 @@ export default function TwilioConfigModal() {
     authToken: "",
     phoneNumber: "",
   });
+  const [content, setContent] = useState("")
 
   const [isLoading, setIsLoading] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
@@ -121,6 +123,7 @@ export default function TwilioConfigModal() {
           sid: formData.sid,
           authToken: formData.authToken,
           phoneNumber: formData.phoneNumber,
+          content
         }),
       });
 
@@ -258,6 +261,20 @@ export default function TwilioConfigModal() {
               onChange={handleChange}
               className="col-span-3"
               placeholder="+1..."
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="content" className="text-right">
+              Personality
+            </Label>
+            <Textarea
+              id="content"
+              name="content"
+              disabled={configLoading}
+              value={content}
+              onChange={(e)=>setContent(e.target.value)}
+              className="col-span-3"
+              placeholder="Give your assistant a personality"
             />
           </div>
         </div>

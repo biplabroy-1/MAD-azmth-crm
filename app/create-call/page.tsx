@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TwilioConfigModal from "@/components/TwilioConfig";
 import CSVImporter, { Contact } from "@/components/CSVImporter";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function CreateCall() {
   const [contacts, setContacts] = useState<Contact[]>([
@@ -250,7 +251,7 @@ export default function CreateCall() {
                 <CSVImporter onImportContacts={handleImportContacts} />
               </div>
 
-              <div className="space-y-5">
+              <ScrollArea className="space-y-5c h-96 rounded-md border px-4">
                 {contacts.map((contact, index) => (
                   <div
                     key={contact.id}
@@ -258,7 +259,7 @@ export default function CreateCall() {
                       !contact.hasCountryCode && contact.number
                         ? "border-red-200"
                         : "border-gray-200"
-                    } rounded-xl bg-white relative transition-all hover:shadow-sm group`}
+                    } rounded-xl bg-white gap-4 relative transition-all hover:shadow-sm group my-4`}
                   >
                     <div className="absolute right-4 top-4">
                       <Button
@@ -340,7 +341,7 @@ export default function CreateCall() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </ScrollArea>
 
               <Button
                 type="button"

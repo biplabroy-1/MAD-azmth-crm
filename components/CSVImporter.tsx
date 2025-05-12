@@ -477,7 +477,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                   </div>
                 </div>
 
-                <div className="border rounded-md overflow-hidden">
+                <div className="border rounded-md overflow-hidden overflow-y-visible">
                   <div className="max-h-[260px]">
                     <Table className="w-full">
                       <TableHeader>
@@ -497,7 +497,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {getCurrentPageData().slice(0, 4).map((row, rowIndex) => (
+                        {getCurrentPageData().slice(0, itemsPerPage).map((row, rowIndex) => (
                           <TableRow key={rowIndex}>
                             {headers.map((header, colIndex) => (
                               <TableCell
