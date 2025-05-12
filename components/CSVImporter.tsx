@@ -49,7 +49,6 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
   const [headers, setHeaders] = useState<string[]>([]);
   const [nameColumn, setNameColumn] = useState<string | undefined>();
   const [numberColumn, setNumberColumn] = useState<string | undefined>();
-  const [previewData, setPreviewData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [totalPages, setTotalPages] = useState(1);
@@ -107,7 +106,6 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
               });
 
               setCsvData(dataRows);
-              setPreviewData(dataRows.slice(0, 5)); // Show first 5 rows for preview
 
               // Try to automatically find name and phone columns
               const nameColumnIndex = headers.findIndex(
@@ -450,9 +448,6 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
             </div>
 
             <div>
-              <h3 className="font-medium text-sm text-gray-700 mb-2">
-                Preview (First 4 rows)
-              </h3>
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-2">
                   <div className="flex items-center gap-2">
