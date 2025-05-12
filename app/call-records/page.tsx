@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
 import { CallRecord } from "@/types/interfaces";
+import xlsx from "json-as-xlsx";
 
 export default function CallRecords() {
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
@@ -85,6 +86,45 @@ export default function CallRecords() {
     }
   };
 
+  const exportAsCSV = () => {
+    const data = [
+      {
+        sheet: "Call Records",
+        columns: [
+          { label: "Caller ID", value: "id" },
+          { label: "Name", value: "name" },
+          { label: "Phone Number", value: "number" },
+          { label: "Via", value: "twilioPhoneNumber" },
+          { label: "Started At", value: "startedAt" },
+          { label: "Ended At", value: "endedAt" },
+          { label: "Duration", value: "duration" },
+          { label: "Call Summary", value: "summary" },
+        ],
+        content: filteredRecords.map((record) => ({
+          id: record.id,
+          name: record.customer?.name || "Unknown",
+          number: record.customer?.number || "N/A",
+          twilioPhoneNumber: record.phoneNumber?.twilioPhoneNumber || "N/A",
+          startedAt: formatDate(record.startedAt || record.createdAt),
+          endedAt: formatDate(record.endedAt),
+          duration: formatDuration(record.startedAt, record.endedAt),
+          summary: record.summary || "",
+        })),
+      },
+    ];
+
+    const settings = {
+      fileName: "CallRecords",
+      extraLength: 3,
+      writeMode: "writeFile",
+      writeOptions: {},
+      RTL: false,
+    };
+
+    xlsx(data, settings);
+    console.log(filteredRecords);
+  };
+
   const handleCardClick = (call: CallRecord) => {
     setSelectedCall(call);
   };
@@ -107,6 +147,13 @@ export default function CallRecords() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            onClick={exportAsCSV}
+            className="w-full sm:w-auto"
+          >
+            Export as CSV
+          </Button>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

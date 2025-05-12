@@ -8,7 +8,7 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

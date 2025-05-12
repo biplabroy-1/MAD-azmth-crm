@@ -49,4 +49,3 @@ export const formatDuration = (startDate: string, endDate: string) => {
 
   return `${minutes > 0 ? `${minutes}m ` : ""}${remainingSeconds}s`;
 };
-

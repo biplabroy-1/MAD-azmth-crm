@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 
 interface TwilioConfigData {
@@ -32,11 +32,10 @@ export default function TwilioConfigModal() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [content, setContent] = useState("");
   const [configLoading, setConfigLoading] = useState(false);
   const { user } = useUser();
+  const { toast } = useToast();
 
-  // Fetch existing Twilio configuration when component mounts or user changes
   useEffect(() => {
     const fetchTwilioConfig = async () => {
       if (user?.id && formData.sid === "") {
@@ -59,15 +58,23 @@ export default function TwilioConfigModal() {
               phoneNumber: twilioConfig.phoneNumber || "",
             });
             if (!twilioConfig) {
-              toast("Info", {
+              toast({
+                title: "Info",
                 description: "Twilio Config not found",
+              });
+            } else {
+              toast({
+                title: "Success",
+                description: "Twilio configuration loaded successfully",
               });
             }
           }
         } catch (error) {
           console.error("Failed to fetch Twilio config:", error);
-          toast("Error", {
+          toast({
+            title: "Error",
             description: "Failed to fetch Twilio Config",
+            variant: "destructive",
           });
         } finally {
           setConfigLoading(false);
@@ -76,29 +83,34 @@ export default function TwilioConfigModal() {
     };
 
     fetchTwilioConfig();
-  }, [user?.id, formData.sid]);
+  }, [user?.id, formData.sid, toast]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    toast({
+      title: "Info",
+      description: "Updating configuration field...",
+    });
   };
 
   const handleSubmit = async () => {
     if (!formData.sid || !formData.authToken || !formData.phoneNumber) {
-      toast("Error", {
+      toast({
+        title: "Error",
         description: "All fields are required",
+        variant: "destructive",
       });
       return;
     }
 
     try {
       setIsLoading(true);
-      toast("Saving configuration...", {
+      toast({
+        title: "Loading",
         description: "Saving your Twilio configuration.",
-        duration: 3000,
       });
 
-      // Step 1: Save Twilio configuration first
       const configRes = await fetch("/api/twilio-config", {
         method: "POST",
         headers: {
@@ -109,7 +121,6 @@ export default function TwilioConfigModal() {
           sid: formData.sid,
           authToken: formData.authToken,
           phoneNumber: formData.phoneNumber,
-          content: content,
         }),
       });
 
@@ -118,10 +129,9 @@ export default function TwilioConfigModal() {
         throw new Error(error.message || "Failed to save configuration");
       }
 
-      // Step 2: Create assistant
-      toast("Creating assistant...", {
+      toast({
+        title: "Loading",
         description: "Please wait while we set up your assistant.",
-        duration: 3000,
       });
 
       const assistantRes = await fetch("/api/create-assistant", {
@@ -130,9 +140,6 @@ export default function TwilioConfigModal() {
           "Content-Type": "application/json",
           "x-clerk-user-id": user?.id || "",
         },
-        body: JSON.stringify({
-          content,
-        }),
       });
 
       if (!assistantRes.ok) {
@@ -145,17 +152,17 @@ export default function TwilioConfigModal() {
         throw new Error(message || "Assistant ID not found");
       }
       if (message === "Assistant already created") {
-        toast("Success", {
+        toast({
+          title: "Success",
           description: message || "Assistant has been successfully created.",
         });
         setOpen(false);
         return;
       }
 
-      // Step 3: Create number
-      toast("Linking Twilio number...", {
+      toast({
+        title: "Loading",
         description: "Almost there! Configuring your number.",
-        duration: 3000,
       });
 
       const numberRes = await fetch("/api/create-number", {
@@ -177,15 +184,17 @@ export default function TwilioConfigModal() {
         throw new Error(error.message || "Failed to create number");
       }
       const data = await numberRes.json();
-      toast("Twilio configuration complete", {
-        description:
-          data.message || "Your assistant is now ready to make calls.",
+      toast({
+        title: "Success",
+        description: data.message || "Your assistant is now ready to make calls.",
       });
 
       setOpen(false);
     } catch (err: any) {
-      toast("Error", {
+      toast({
+        title: "Error",
         description: err.message || "Something went wrong",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
