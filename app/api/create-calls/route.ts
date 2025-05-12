@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!userRecord) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    const { twilioConfig,assistantId } = userRecord;
+    const { twilioConfig , assistantId } = userRecord;
     if (!twilioConfig) {
       return NextResponse.json({ error: 'Twilio configuration not found' }, { status: 404 });
     }

@@ -53,13 +53,14 @@ export default function TwilioConfigModal() {
 
           if (response.ok) {
             const { twilioConfig } = await response.json();
-
+            console.log(twilioConfig);
+            
             setFormData({
               sid: twilioConfig.sid || "",
               authToken: twilioConfig.authToken || "",
               phoneNumber: twilioConfig.phoneNumber || "",
             });
-            if (!twilioConfig) {
+            if (!twilioConfig.sid && !twilioConfig.authToken && !twilioConfig.phoneNumber) {
               toast({
                 title: "Info",
                 description: "Twilio Config not found",
@@ -90,10 +91,6 @@ export default function TwilioConfigModal() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    toast({
-      title: "Info",
-      description: "Updating configuration field...",
-    });
   };
 
   const handleSubmit = async () => {

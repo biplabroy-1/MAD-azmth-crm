@@ -79,13 +79,13 @@ export default function CreateCall() {
       contacts.map((contact) =>
         contact.id === id
           ? {
-              ...contact,
-              [field]: value,
-              // Update hasCountryCode when modifying the number
-              ...(field === "number"
-                ? { hasCountryCode: hasCountryCode(value) }
-                : {}),
-            }
+            ...contact,
+            [field]: value,
+            // Update hasCountryCode when modifying the number
+            ...(field === "number"
+              ? { hasCountryCode: hasCountryCode(value) }
+              : {}),
+          }
           : contact
       )
     );
@@ -110,7 +110,7 @@ export default function CreateCall() {
     } else {
       // Otherwise, append the imported contacts
       setContacts(prevContacts => [...prevContacts, ...importedContacts]);
-      
+
       toast({
         title: "Contacts added",
         description: `Added ${importedContacts.length} contacts from CSV import`,
@@ -170,7 +170,13 @@ export default function CreateCall() {
         }),
       });
       const data = await response.json();
-
+      if (data.error) {
+        toast({
+          title: "Error",
+          description: data.error,
+          variant: "destructive",
+        })
+      }
       if (!response.ok) {
         throw new Error("Failed to create calls");
       }
@@ -182,11 +188,11 @@ export default function CreateCall() {
 
       // Navigate to call records page
       router.push("/call-records");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating calls:", error);
       toast({
         title: "Error",
-        description: "Failed to create calls. Please try again.",
+        description: error.message || "Failed to create calls. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -240,8 +246,8 @@ export default function CreateCall() {
         <Card className="shadow-xl border-0">
           <CardHeader className="border-b border-gray-200 px-8 py-6">
             <CardTitle className="text-3xl font-semibold text-gray-900 mb-2 flex justify-between items-center">
-            Initiate New Calls
-            <TwilioConfigModal />
+              Initiate New Calls
+              <TwilioConfigModal />
             </CardTitle>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -255,11 +261,10 @@ export default function CreateCall() {
                 {contacts.map((contact, index) => (
                   <div
                     key={contact.id}
-                    className={`p-6 border ${
-                      !contact.hasCountryCode && contact.number
-                        ? "border-red-200"
-                        : "border-gray-200"
-                    } rounded-xl bg-white gap-4 relative transition-all hover:shadow-sm group my-4`}
+                    className={`p-6 border ${!contact.hasCountryCode && contact.number
+                      ? "border-red-200"
+                      : "border-gray-200"
+                      } rounded-xl bg-white gap-4 relative transition-all hover:shadow-sm group my-4`}
                   >
                     <div className="absolute right-4 top-4">
                       <Button
@@ -304,11 +309,10 @@ export default function CreateCall() {
                       <div className="space-y-2">
                         <Label
                           htmlFor={`number-${contact.id}`}
-                          className={`flex items-center gap-2 ${
-                            !contact.hasCountryCode && contact.number
-                              ? "text-red-500"
-                              : "text-gray-700"
-                          }`}
+                          className={`flex items-center gap-2 ${!contact.hasCountryCode && contact.number
+                            ? "text-red-500"
+                            : "text-gray-700"
+                            }`}
                         >
                           <Phone className="h-4 w-4" />
                           Phone Number (include country code)
@@ -326,11 +330,10 @@ export default function CreateCall() {
                             updateContact(contact.id, "number", e.target.value)
                           }
                           placeholder="+1 (555) 123-4567"
-                          className={`focus-visible:ring-primary h-11 ${
-                            !contact.hasCountryCode && contact.number
-                              ? "border-red-300 focus:border-red-500"
-                              : ""
-                          }`}
+                          className={`focus-visible:ring-primary h-11 ${!contact.hasCountryCode && contact.number
+                            ? "border-red-300 focus:border-red-500"
+                            : ""
+                            }`}
                         />
                         {!contact.hasCountryCode && contact.number && (
                           <p className="text-xs text-red-500 mt-1">
