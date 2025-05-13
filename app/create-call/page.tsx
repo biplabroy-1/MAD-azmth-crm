@@ -162,7 +162,7 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch("https://backend-queue.globaltfn.tech", {
+      const response = await fetch("https://backend-queue.globaltfn.tech/queue-calls", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
