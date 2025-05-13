@@ -27,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TwilioConfigModal from "@/components/TwilioConfig";
 import CSVImporter, { Contact } from "@/components/CSVImporter";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUser } from "@clerk/nextjs";
 
 export default function CreateCall() {
   const [contacts, setContacts] = useState<Contact[]>([
@@ -36,7 +37,8 @@ export default function CreateCall() {
   const [contactsWithMissingCountryCode, setContactsWithMissingCountryCode] =
     useState<Contact[]>([]);
   const [showValidationWarning, setShowValidationWarning] = useState(false);
-
+  const { user } = useUser();
+  const clerkId = user?.id
   const router = useRouter();
   const { toast } = useToast();
 
@@ -160,12 +162,13 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch("/api/create-calls", {
+      const response = await fetch("https://backend-queue.globaltfn.tech", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          clerkId,
           contacts: customersData,
         }),
       });
@@ -183,7 +186,7 @@ export default function CreateCall() {
 
       toast({
         title: "Success",
-        description: "Calls have been initiated successfully",
+        description: `${data.message} with ${data.count} Customers` || "Calls have been initiated successfully",
       });
 
       // Navigate to call records page

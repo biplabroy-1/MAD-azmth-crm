@@ -1,8 +1,8 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IUser extends Document {
-  _id: string; // MongoDB ObjectId
-  clerkId: string; // Clerk user ID
+  _id: string; // MongoDB ObjectId (as string)
+  clerkId: string;
   email: string;
   phoneNumber: string;
   twilioConfig: {
@@ -11,13 +11,25 @@ export interface IUser extends Document {
     phoneNumber: string;
   };
   content: string;
+  callQueue: {
+    name: string;
+    number: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
+const CallQueueSchema: Schema = new Schema(
+  {
+    name: { type: String, required: true },
+    number: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const UserSchema: Schema = new Schema(
   {
-    _id: { type: String, required: true }, // Use string for ObjectId
+    _id: { type: String, required: true },
     clerkId: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     firstName: { type: String },
@@ -31,9 +43,10 @@ const UserSchema: Schema = new Schema(
     },
     assistantId: { type: String },
     content: { type: String },
+    callQueue: [CallQueueSchema],
   },
   {
-    timestamps: true, // Automatically adds createdAt and updatedAt fields
+    timestamps: true,
   }
 );
 
