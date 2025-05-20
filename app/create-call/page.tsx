@@ -12,13 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Plus,
-  ChevronLeft,
-  Phone,
-  AlertCircle,
-  Loader,
-} from "lucide-react";
+import { Plus, ChevronLeft, Phone, AlertCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -161,16 +155,19 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch("https://backend-queue.globaltfn.tech/queue-calls", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clerkId,
-          contacts: customersData,
-        }),
-      });
+      const response = await fetch(
+        "https://backend-queue.globaltfn.tech/api/queue-calls",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clerkId,
+            contacts: customersData,
+          }),
+        }
+      );
       const data = await response.json();
       if (data.error) {
         toast({
@@ -186,8 +183,7 @@ export default function CreateCall() {
       toast({
         title: "Success",
         description:
-          `${data.message} with ${data.count} Customers` ||
-          "Calls have been initiated successfully",
+          `${data.message}` || "Calls have been initiated successfully",
       });
 
       // Navigate to call records page
