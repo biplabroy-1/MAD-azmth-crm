@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
                             call: {
                                 id: "$$call.call.id",
                                 type: "$$call.call.type",
-                                phoneNumber: "$$call.call.phoneNumber",
+                                phoneNumber: "$$call.call.phoneNumber.twilioPhoneNumber",
                             },
                             customer: "$$call.customer",
                             assistant: {

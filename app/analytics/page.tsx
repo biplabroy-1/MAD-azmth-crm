@@ -91,7 +91,9 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null
+  );
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export default function AnalyticsPage() {
         // Fetch both analytics endpoints in parallel
         const [analyticsResponse, overviewResponse] = await Promise.all([
           fetch("/api/get-analytics"),
-          fetch("/api/overview")
+          fetch("/api/overview"),
         ]);
 
         if (!analyticsResponse.ok) {
@@ -199,7 +201,9 @@ export default function AnalyticsPage() {
         content: calls.map((call) => ({
           phoneNumber: call.call.phoneNumber,
           customerName: call.customer?.name || "Unknown",
-          duration: `${Math.floor(call.durationSeconds / 60)}m ${call.durationSeconds % 60}s`,
+          duration: `${Math.floor(call.durationSeconds / 60)}m ${
+            call.durationSeconds % 60
+          }s`,
           assistant: call.assistant.name,
           startedAt: new Date(call.startedAt).toLocaleString(),
           endedReason: call.endedReason || "N/A",
@@ -234,7 +238,9 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-2xl">
           <CardHeader>
-            <CardTitle className="text-red-500">Error Loading Analytics</CardTitle>
+            <CardTitle className="text-red-500">
+              Error Loading Analytics
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p>{error}</p>
@@ -268,25 +274,43 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Queue Stats</CardTitle>
-                <CardDescription>Current call processing status</CardDescription>
+                <CardDescription>
+                  Current call processing status
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">In Queue</p>
-                    <p className="text-2xl font-bold">{overview?.queueStats.totalInQueue || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      In Queue
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.queueStats.totalInQueue || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold">{overview?.queueStats.totalCompleted || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Completed
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.queueStats.totalCompleted || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Failed</p>
-                    <p className="text-2xl font-bold text-red-500">{overview?.queueStats.totalFailed || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Failed
+                    </p>
+                    <p className="text-2xl font-bold text-red-500">
+                      {overview?.queueStats.totalFailed || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
-                    <p className="text-2xl font-bold text-green-500">{(overview?.queueStats.successRate || 0).toFixed(1)}%</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Success Rate
+                    </p>
+                    <p className="text-2xl font-bold text-green-500">
+                      {(overview?.queueStats.successRate || 0).toFixed(1)}%
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -300,23 +324,42 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Records</p>
-                    <p className="text-2xl font-bold">{overview?.callDataStats.totalCallRecords || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total Records
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.callDataStats.totalCallRecords || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Short Calls</p>
-                    <p className="text-2xl font-bold">{overview?.callDataStats.shortCallsCount || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Short Calls
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.callDataStats.shortCallsCount || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Successful Analysis</p>
-                    <p className="text-2xl font-bold">{overview?.callDataStats.successfulAnalysisCount || 0}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Successful Analysis
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.callDataStats.successfulAnalysisCount || 0}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Analysis Rate</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Analysis Rate
+                    </p>
                     <p className="text-2xl font-bold">
                       {overview?.callDataStats.totalCallRecords
-                        ? ((overview.callDataStats.callsWithAnalysis / overview.callDataStats.totalCallRecords) * 100).toFixed(1)
-                        : 0}%
+                        ? (
+                            (overview.callDataStats.callsWithAnalysis /
+                              overview.callDataStats.totalCallRecords) *
+                            100
+                          ).toFixed(1)
+                        : 0}
+                      %
                     </p>
                   </div>
                 </div>
@@ -328,47 +371,56 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Key Metrics</CardTitle>
-                <CardDescription>Visual representation of call statistics</CardDescription>
+                <CardDescription>
+                  Visual representation of call statistics
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
                 <Bar
                   data={{
-                    labels: ['Total Records', 'Short Calls', 'With Analysis', 'Successful Analysis'],
-                    datasets: [{
-                      label: 'Call Statistics',
-                      data: [
-                        overview.callDataStats.totalCallRecords,
-                        overview.callDataStats.shortCallsCount,
-                        overview.callDataStats.callsWithAnalysis,
-                        overview.callDataStats.successfulAnalysisCount
-                      ],
-                      backgroundColor: [
-                        'rgba(53, 162, 235, 0.5)',
-                        'rgba(255, 159, 64, 0.5)',
-                        'rgba(75, 192, 192, 0.5)',
-                        'rgba(52, 235, 116, 0.5)',
-                      ],
-                      borderColor: [
-                        'rgb(53, 162, 235)',
-                        'rgb(255, 159, 64)',
-                        'rgb(75, 192, 192)',
-                        'rgb(52, 235, 116)',
-                      ],
-                      borderWidth: 1
-                    }]
+                    labels: [
+                      "Total Records",
+                      "Short Calls",
+                      "With Analysis",
+                      "Successful Analysis",
+                    ],
+                    datasets: [
+                      {
+                        label: "Call Statistics",
+                        data: [
+                          overview.callDataStats.totalCallRecords,
+                          overview.callDataStats.shortCallsCount,
+                          overview.callDataStats.callsWithAnalysis,
+                          overview.callDataStats.successfulAnalysisCount,
+                        ],
+                        backgroundColor: [
+                          "rgba(53, 162, 235, 0.5)",
+                          "rgba(255, 159, 64, 0.5)",
+                          "rgba(75, 192, 192, 0.5)",
+                          "rgba(52, 235, 116, 0.5)",
+                        ],
+                        borderColor: [
+                          "rgb(53, 162, 235)",
+                          "rgb(255, 159, 64)",
+                          "rgb(75, 192, 192)",
+                          "rgb(52, 235, 116)",
+                        ],
+                        borderWidth: 1,
+                      },
+                    ],
                   }}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
                       legend: {
-                        position: 'top' as const,
+                        position: "top" as const,
                       },
                       title: {
                         display: true,
-                        text: 'Call Analytics Overview'
-                      }
-                    }
+                        text: "Call Analytics Overview",
+                      },
+                    },
                   }}
                 />
               </CardContent>
@@ -407,7 +459,14 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="text-4xl font-bold">
                   {calls.length > 0
-                    ? `${(calls.reduce((acc, call) => acc + call.durationSeconds, 0) / calls.length / 60).toFixed(1)} min`
+                    ? `${(
+                        calls.reduce(
+                          (acc, call) => acc + call.durationSeconds,
+                          0
+                        ) /
+                        calls.length /
+                        60
+                      ).toFixed(1)} min`
                     : "N/A"}
                 </div>
               </CardContent>
@@ -419,7 +478,9 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-bold text-green-500">100%</div>
-                <p className="text-muted-foreground">Filtered for successful calls only</p>
+                <p className="text-muted-foreground">
+                  Filtered for successful calls only
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -475,8 +536,8 @@ export default function AnalyticsPage() {
                         <TableCell>
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {
-                              addSuffix: true,
-                            })
+                                addSuffix: true,
+                              })
                             : "Unknown"}
                         </TableCell>
                       </TableRow>
