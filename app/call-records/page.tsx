@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,7 +24,7 @@ import CallDetailModal from "@/components/call-detail-modal";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
-import { CallRecord } from "@/types/interfaces";
+import type { CallRecord } from "@/types/interfaces";
 import xlsx from "json-as-xlsx";
 
 export default function CallRecords() {
@@ -35,6 +35,7 @@ export default function CallRecords() {
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
+  const id = useId();
 
   useEffect(() => {
     fetchCallRecords();
@@ -185,7 +186,7 @@ export default function CallRecords() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <Card key={i}>
+            <Card key={id}>
               <CardHeader>
                 <Skeleton className="h-6 w-3/4" />
               </CardHeader>

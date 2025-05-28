@@ -28,6 +28,9 @@ import {
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
 import { formatDistanceToNow } from "date-fns";
+import { Download } from "lucide-react";
+import xlsx from "json-as-xlsx";
+import { Button } from "@/components/ui/button";
 
 // Register Chart.js components
 ChartJS.register(
@@ -43,6 +46,7 @@ ChartJS.register(
 interface AnalyticsCallRecord {
   analysis: {
     successEvaluation: string;
+    // Add other analysis fields as needed
   };
   startedAt: string;
   endedReason: string;
@@ -177,6 +181,42 @@ export default function AnalyticsPage() {
   };
 
   const chartData = prepareChartData();
+
+  const exportSuccessfulCallsToCSV = () => {
+    if (!calls.length) return;
+
+    const data = [
+      {
+        sheet: "Successful Calls",
+        columns: [
+          { label: "Phone Number", value: "phoneNumber" },
+          { label: "Customer Name", value: "customerName" },
+          { label: "Duration", value: "duration" },
+          { label: "Assistant", value: "assistant" },
+          { label: "Started At", value: "startedAt" },
+          { label: "Ended Reason", value: "endedReason" },
+        ],
+        content: calls.map((call) => ({
+          phoneNumber: call.call.phoneNumber,
+          customerName: call.customer?.name || "Unknown",
+          duration: `${Math.floor(call.durationSeconds / 60)}m ${call.durationSeconds % 60}s`,
+          assistant: call.assistant.name,
+          startedAt: new Date(call.startedAt).toLocaleString(),
+          endedReason: call.endedReason || "N/A",
+        })),
+      },
+    ];
+
+    const settings = {
+      fileName: "SuccessfulCalls",
+      extraLength: 3,
+      writeMode: "writeFile",
+      writeOptions: {},
+      RTL: false,
+    };
+
+    xlsx(data, settings);
+  };
 
   if (loading) {
     return (
@@ -337,6 +377,19 @@ export default function AnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="detailed" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Detailed Analysis</h2>
+            <Button
+              variant="outline"
+              onClick={exportSuccessfulCallsToCSV}
+              disabled={!calls.length}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export Successful Calls
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>

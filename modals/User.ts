@@ -1,31 +1,49 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
+// Subinterfaces
+interface TwilioConfig {
+  sid: string;
+  authToken: string;
+  phoneNumber: string;
+}
+
+export interface Contact {
+  name: string;
+  number: string;
+}
+
 export interface IUser extends Document {
-  _id: string; // MongoDB ObjectId (as string)
+  _id: string;
   clerkId: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
   phoneNumber: string;
-  twilioConfig: {
-    sid: string;
-    authToken: string;
-    phoneNumber: string;
-  };
+  twilioConfig: TwilioConfig;
+  assistantId: string;
   content: string;
-  callQueue: {
-    name: string;
-    number: string;
-  }[];
+  callQueue: Contact[];
+  callQueueDone: (Contact & { status?: string })[];
+  fullCallData?: Record<string, any>[];
+  callTimeStart: string;
+  callTimeEnd: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const CallQueueSchema: Schema = new Schema(
+// Schema Definitions
+
+const ContactSchema = new Schema(
   {
     name: { type: String, required: true },
     number: { type: String, required: true },
+    status: { type: String },
   },
   { _id: false }
 );
+
+const fullCallDataSchema = new Schema({}, { strict: false, _id: false });
 
 const UserSchema: Schema = new Schema(
   {
@@ -43,13 +61,18 @@ const UserSchema: Schema = new Schema(
     },
     assistantId: { type: String },
     content: { type: String },
-    callQueue: [CallQueueSchema],
+
+    callQueue: [ContactSchema],
+    callQueueDone: [ContactSchema],
+    fullCallData: [fullCallDataSchema],
+
+    callTimeStart: { type: String, default: "03:30" },
+    callTimeEnd: { type: String, default: "05:30" },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
+// Export model
 const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
 
-export default User;
+export default User

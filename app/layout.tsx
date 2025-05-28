@@ -8,7 +8,8 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
-import { Toaster } from "@/components/ui/toaster"
+import Link from "next/link";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,18 +33,34 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning
         >
-          <header className="flex justify-end items-center p-4 gap-4 h-16">
+          {" "}
+          <header className="flex justify-between items-center p-4 h-16">
             <Toaster />
-            <SignedOut>
-              <SignInButton
-                forceRedirectUrl="/auth-callback"
-                signUpForceRedirectUrl="/auth-callback"
-              />
-              <SignUpButton signInForceRedirectUrl="/auth-callback" />
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
+            <nav className="flex gap-6">
+              <SignedIn>
+                <Link className="hover:text-blue-500" href="/">
+                  Dashboard
+                </Link>
+                <Link className="hover:text-blue-500" href="/analytics">
+                  Analytics
+                </Link>
+                <Link className="hover:text-blue-500" href="/call-records">
+                  Call Records
+                </Link>
+              </SignedIn>
+            </nav>
+            <div className="flex items-center gap-4">
+              <SignedOut>
+                <SignInButton
+                  forceRedirectUrl="/auth-callback"
+                  signUpForceRedirectUrl="/auth-callback"
+                />
+                <SignUpButton signInForceRedirectUrl="/auth-callback" />
+              </SignedOut>
+              <SignedIn>
+                <UserButton />
+              </SignedIn>
+            </div>
           </header>
           {children}
         </body>
