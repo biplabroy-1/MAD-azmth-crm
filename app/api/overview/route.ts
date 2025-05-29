@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
         const user = await currentUser();
         await connectDB();
 
+
         const aggregateResult = await User.aggregate([
             {
                 $match: {
@@ -17,44 +18,43 @@ export async function GET(request: NextRequest) {
             },
             {
                 $project: {
-                    _id: 1,
                     email: 1,
-                    callQueueLength: { $size: { $ifNull: ["$callQueue", []] } },
-                    callQueueDoneLength: { $size: { $ifNull: ["$callQueueDone", []] } },
-                    callQueueFailed: {
-                        $size: {
-                            $filter: {
-                                input: { $ifNull: ["$callQueueDone", []] },
-                                as: "call",
-                                cond: { $eq: ["$$call.status", "failed"] }
+                    // Flatten callQueue
+                    callQueueArray: {
+                        $reduce: {
+                            input: { $objectToArray: { $ifNull: ["$callQueue", {}] } },
+                            initialValue: [],
+                            in: { $concatArrays: ["$$value", "$$this.v"] }
+                        }
+                    },
+                    // Flatten callQueueDone
+                    callQueueDoneArray: {
+                        $reduce: {
+                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
+                            initialValue: [],
+                            in: { $concatArrays: ["$$value", "$$this.v"] }
+                        }
+                    },
+                    // Raw full call data
+                    fullCallData: { $ifNull: ["$fullCallData", []] },
+                    // Assistant-specific sizes
+                    assistantQueueSizes: {
+                        $map: {
+                            input: { $objectToArray: { $ifNull: ["$callQueue", {}] } },
+                            as: "entry",
+                            in: {
+                                k: "$$entry.k",
+                                v: { $size: { $ifNull: ["$$entry.v", []] } }
                             }
                         }
                     },
-                    fullCallDataLength: { $size: { $ifNull: ["$fullCallData", []] } },
-                    shortCalls: {
-                        $size: {
-                            $filter: {
-                                input: { $ifNull: ["$fullCallData", []] },
-                                as: "call",
-                                cond: { $lt: [{ $ifNull: ["$$call.duration", 0] }, 30] }
-                            }
-                        }
-                    },
-                    successfulAnalysis: {
-                        $size: {
-                            $filter: {
-                                input: { $ifNull: ["$fullCallData", []] },
-                                as: "call",
-                                cond: { $eq: [{ $ifNull: ["$$call.analysisStatus", ""] }, "complete"] }
-                            }
-                        }
-                    },
-                    callsWithAnalysis: {
-                        $size: {
-                            $filter: {
-                                input: { $ifNull: ["$fullCallData", []] },
-                                as: "call",
-                                cond: { $ne: [{ $ifNull: ["$$call.analysis", null] }, null] }
+                    assistantQueueDoneSizes: {
+                        $map: {
+                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
+                            as: "entry",
+                            in: {
+                                k: "$$entry.k",
+                                v: { $size: { $ifNull: ["$$entry.v", []] } }
                             }
                         }
                     }
@@ -62,7 +62,56 @@ export async function GET(request: NextRequest) {
             },
             {
                 $project: {
-                    _id: 0,
+                    email: 1,
+                    callQueueLength: { $size: "$callQueueArray" },
+                    callQueueDoneLength: { $size: "$callQueueDoneArray" },
+                    callQueueFailed: {
+                        $size: {
+                            $filter: {
+                                input: "$callQueueDoneArray",
+                                as: "call",
+                                cond: { $eq: ["$$call.status", "failed_to_initiate"] }
+                            }
+                        }
+                    },
+                    fullCallDataLength: { $size: "$fullCallData" },
+                    shortCalls: {
+                        $size: {
+                            $filter: {
+                                input: "$fullCallData",
+                                as: "call",
+                                cond: { $lt: [{ $ifNull: ["$$call.durationSeconds", 0] }, 30] }
+                            }
+                        }
+                    },
+                    longCalls: {
+                        $size: {
+                            $filter: {
+                                input: "$fullCallData",
+                                as: "call",
+                                cond: { $gt: [{ $ifNull: ["$$call.durationSeconds", 0] }, 30] }
+                            }
+                        }
+                    },
+                    successfulAnalysisCount: {
+                        $size: {
+                            $filter: {
+                                input: "$fullCallData",
+                                as: "call",
+                                cond: { $eq: ["$$call.analysis.successEvaluation", "true"] },
+                            }
+                        }
+                    },
+                    assistantSpecificQueue: {
+                        $arrayToObject: "$assistantQueueSizes"
+                    },
+                    assistantSpecificQueueDone: {
+                        $arrayToObject: "$assistantQueueDoneSizes"
+                    }
+                }
+            },
+            {
+                $project: {
                     email: 1,
                     queueStats: {
                         totalInQueue: "$callQueueLength",
@@ -84,26 +133,36 @@ export async function GET(request: NextRequest) {
                                     ]
                                 }
                             ]
+                        },
+                        assistantSpecific: {
+                            queue: "$assistantSpecificQueue",
+                            completed: "$assistantSpecificQueueDone"
                         }
                     },
                     callDataStats: {
                         totalCallRecords: "$fullCallDataLength",
                         shortCallsCount: "$shortCalls",
-                        successfulAnalysisCount: "$successfulAnalysis",
-                        callsWithAnalysis: "$callsWithAnalysis"
+                        longCallsCount: "$longCalls",
+                        successfulAnalysisCount: "$successfulAnalysisCount"
                     }
                 }
             }
         ]);
 
+
+
         const userData = aggregateResult[0] || {
             email: user?.emailAddresses?.[0]?.emailAddress || "unknown",
-            queueStats: { totalInQueue: 0, totalCompleted: 0, totalFailed: 0, successRate: 0 },
+            queueStats: {
+                totalInQueue: 0,
+                totalCompleted: 0,
+                totalFailed: 0,
+                successRate: 0,
+                assistantSpecific: {}
+            },
             callDataStats: {
                 totalCallRecords: 0,
                 shortCallsCount: 0,
-                successfulAnalysisCount: 0,
-                callsWithAnalysis: 0
             }
         };
 

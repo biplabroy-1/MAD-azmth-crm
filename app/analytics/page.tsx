@@ -46,7 +46,7 @@ ChartJS.register(
 interface AnalyticsCallRecord {
   analysis: {
     successEvaluation: string;
-    // Add other analysis fields as needed
+    summary: string;
   };
   startedAt: string;
   endedReason: string;
@@ -64,22 +64,33 @@ interface AnalyticsCallRecord {
     id: string;
     name: string;
   };
+  transcript: string;
+  recordingUrl: string;
 }
 
 interface OverviewData {
   data: {
+    _id: string;
     email: string;
     queueStats: {
       totalInQueue: number;
       totalCompleted: number;
       totalFailed: number;
       successRate: number;
+      assistantSpecific: {
+        queue: {
+          [key: string]: number;
+        };
+        completed: {
+          [key: string]: number;
+        };
+      };
     };
     callDataStats: {
       totalCallRecords: number;
       shortCallsCount: number;
+      longCallsCount: number;
       successfulAnalysisCount: number;
-      callsWithAnalysis: number;
     };
   };
 }
@@ -193,27 +204,38 @@ export default function AnalyticsPage() {
         columns: [
           { label: "Phone Number", value: "phoneNumber" },
           { label: "Customer Name", value: "customerName" },
+          { label: "Customer Number", value: "customerNumber" },
           { label: "Duration", value: "duration" },
           { label: "Assistant", value: "assistant" },
           { label: "Started At", value: "startedAt" },
           { label: "Ended Reason", value: "endedReason" },
+          { label: "Success Evaluation", value: "successEvaluation" },
+          { label: "Recording URL", value: "recordingUrl" },
+          { label: "Analysis Summary", value: "analysisSummary" },
+          { label: "Transcript", value: "transcript" },
         ],
         content: calls.map((call) => ({
           phoneNumber: call.call.phoneNumber,
           customerName: call.customer?.name || "Unknown",
-          duration: `${Math.floor(call.durationSeconds / 60)}m ${
+          customerNumber: call.customer?.number || "Unknown",
+          duration: `${Math.floor(call.durationSeconds / 60)}m ${(
             call.durationSeconds % 60
-          }s`,
+          ).toFixed(2)}s`,
+
           assistant: call.assistant.name,
           startedAt: new Date(call.startedAt).toLocaleString(),
           endedReason: call.endedReason || "N/A",
+          successEvaluation: call.analysis?.successEvaluation || "N/A",
+          recordingUrl: call.recordingUrl || "N/A",
+          analysisSummary: call.analysis?.summary || "N/A",
+          transcript: call.transcript || "N/A",
         })),
       },
     ];
 
     const settings = {
       fileName: "SuccessfulCalls",
-      extraLength: 3,
+      extraLength: 0,
       writeMode: "writeFile",
       writeOptions: {},
       RTL: false,
@@ -315,6 +337,53 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Queue Stats</CardTitle>
+                <CardDescription>
+                  Current call processing status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {overview?.queueStats.assistantSpecific && (
+                  <div className="mt-4">
+                    <div className="max-h-[200px] overflow-auto">
+                      <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
+                        <div>Name</div>
+                        <div className="text-center">In Queue</div>
+                        <div className="text-center">Done</div>
+                      </div>
+                      {Object.entries(
+                        overview.queueStats.assistantSpecific.queue || {}
+                      ).map(([assistant, queueCount]) => {
+                        const completedCount =
+                          overview.queueStats.assistantSpecific.completed?.[
+                            assistant
+                          ] || 0;
+                        return (
+                          <div
+                            key={assistant}
+                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
+                          >
+                            <div className="font-medium">{assistant}</div>
+                            <div>
+                              <span className="inline-block bg-blue-100 text-blue-800 text-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
+                                {queueCount}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="inline-block bg-green-100 text-green-800 text-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
+                                {completedCount}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -341,25 +410,18 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Successful Analysis
+                      Long Calls
                     </p>
                     <p className="text-2xl font-bold">
-                      {overview?.callDataStats.successfulAnalysisCount || 0}
+                      {overview?.callDataStats.longCallsCount || 0}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Analysis Rate
+                      successful Analysis Count
                     </p>
                     <p className="text-2xl font-bold">
-                      {overview?.callDataStats.totalCallRecords
-                        ? (
-                            (overview.callDataStats.callsWithAnalysis /
-                              overview.callDataStats.totalCallRecords) *
-                            100
-                          ).toFixed(1)
-                        : 0}
-                      %
+                      {overview?.callDataStats.successfulAnalysisCount || 0}
                     </p>
                   </div>
                 </div>
@@ -381,7 +443,7 @@ export default function AnalyticsPage() {
                     labels: [
                       "Total Records",
                       "Short Calls",
-                      "With Analysis",
+                      "Long Calls",
                       "Successful Analysis",
                     ],
                     datasets: [
@@ -390,7 +452,7 @@ export default function AnalyticsPage() {
                         data: [
                           overview.callDataStats.totalCallRecords,
                           overview.callDataStats.shortCallsCount,
-                          overview.callDataStats.callsWithAnalysis,
+                          overview.callDataStats.longCallsCount,
                           overview.callDataStats.successfulAnalysisCount,
                         ],
                         backgroundColor: [

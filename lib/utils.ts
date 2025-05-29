@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import dayjs from "dayjs"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -48,4 +49,34 @@ export const formatDuration = (startDate: string, endDate: string) => {
   const remainingSeconds = seconds % 60;
 
   return `${minutes > 0 ? `${minutes}m ` : ""}${remainingSeconds}s`;
+};
+
+
+// Schedule utility functions
+export type TimeSlot = 'morning' | 'afternoon' | 'evening' | null;
+export type DayOfWeek = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+
+export const getCurrentTimeSlot = (weeklySchedule: any, dayOfWeek: string): any | null => {
+  const now = dayjs();
+  const currentTime = now.format("HH:mm");
+
+  const slots = weeklySchedule?.[dayOfWeek];
+  if (!slots) return null;
+
+  for (const [slotName, slotData] of Object.entries(slots)) {
+    const { callTimeStart, callTimeEnd } = slotData as any;
+
+    if (callTimeStart && callTimeEnd && currentTime >= callTimeStart && currentTime <= callTimeEnd) {
+      return { slotName, slotData };
+    }
+  }
+
+  return { slotName: null, slotData: null }; // No matching slot
+};
+
+
+export const getCurrentDayOfWeek = (): DayOfWeek => {
+  const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayIndex = new Date().getDay();
+  return days[dayIndex];
 };

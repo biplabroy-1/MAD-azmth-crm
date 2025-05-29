@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Plus, ChevronLeft, Phone, AlertCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +19,20 @@ import CSVImporter, { type Contact } from "@/components/CSVImporter";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser } from "@clerk/nextjs";
 import ContactCard from "@/components/ContactCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CreateCall() {
   const [contacts, setContacts] = useState<Contact[]>([
@@ -30,10 +42,51 @@ export default function CreateCall() {
   const [contactsWithMissingCountryCode, setContactsWithMissingCountryCode] =
     useState<Contact[]>([]);
   const [showValidationWarning, setShowValidationWarning] = useState(false);
+  const [queueModalOpen, setQueueModalOpen] = useState(false);
+  const [selectedQueue, setSelectedQueue] = useState("");
   const { user } = useUser();
   const clerkId = user?.id;
   const router = useRouter();
   const { toast } = useToast();
+
+  // Queue options from assistants
+  const [queueOptions, setQueueOptions] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+
+  // Fetch assistants on component mount
+  useEffect(() => {
+    const fetchAssistants = async () => {
+      try {
+        const response = await fetch("/api/get-assistants");
+        if (!response.ok) {
+          throw new Error("Failed to fetch assistants");
+        }
+
+        const data = await response.json();
+        if (data.success && Array.isArray(data.assistants)) {
+          // Format assistants as queue options
+          const formattedAssistants = data.assistants.map((assistant: any) => ({
+            id: assistant.id,
+            name: assistant.name || `Assistant ${assistant.id.slice(0, 6)}`,
+          }));
+
+          setQueueOptions(formattedAssistants);
+        } else {
+          console.error("Invalid assistants data format", data);
+        }
+      } catch (error) {
+        console.error("Error fetching assistants:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load assistants. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAssistants();
+  }, [toast]);
 
   // Validate if a phone number has a country code
   const hasCountryCode = (number: string): boolean => {
@@ -113,9 +166,7 @@ export default function CreateCall() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const validateContacts = () => {
     // Validate contacts
     const invalidContacts = contacts.filter(
       (contact) => !contact.name || !contact.number
@@ -127,7 +178,7 @@ export default function CreateCall() {
         description: "All contacts must have a name and phone number",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     // Check for missing country codes
@@ -143,10 +194,31 @@ export default function CreateCall() {
       });
       setContactsWithMissingCountryCode(contactsMissingCountryCode);
       setShowValidationWarning(true);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleProceedWithSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateContacts()) {
+      setQueueModalOpen(true);
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!selectedQueue) {
+      toast({
+        title: "Queue Required",
+        description: "Please select an assistant queue",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsSubmitting(true);
+    setQueueModalOpen(false);
 
     try {
       // Format contacts for API
@@ -155,19 +227,17 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch(
-        "https://backend-queue.globaltfn.tech/api/queue-calls",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            clerkId,
-            contacts: customersData,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/queue-calls", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clerkId,
+          contacts: customersData,
+          assistantId: selectedQueue, // Add the selected queue ID to the request
+        }),
+      });
       const data = await response.json();
       if (data.error) {
         toast({
@@ -233,8 +303,8 @@ export default function CreateCall() {
               </p>
               {contactsWithMissingCountryCode.length <= 5 && (
                 <ul className="list-disc pl-5 text-sm">
-                  {contactsWithMissingCountryCode.map((contact, index) => (
-                    <li key={React.useId()}>
+                  {contactsWithMissingCountryCode.map((contact) => (
+                    <li key={contact.id}>
                       {contact.name}: {contact.number}
                     </li>
                   ))}
@@ -251,7 +321,7 @@ export default function CreateCall() {
               <TwilioConfigModal />
             </CardTitle>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleProceedWithSubmit}>
             <CardContent className="px-8 py-6 space-y-6">
               <div className="mb-6">
                 {/* CSV Import Component */}
@@ -292,25 +362,62 @@ export default function CreateCall() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
                 className="w-full sm:w-auto h-11 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-md"
               >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader className="animate-spin" />
-                    Adding to Queue
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Start Calls
-                  </span>
-                )}
+                <span className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Start Calls
+                </span>
               </Button>
             </CardFooter>
           </form>
         </Card>
       </div>
+
+      {/* Queue Selection Modal */}
+      <Dialog open={queueModalOpen} onOpenChange={setQueueModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Assistant Queue</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Please select which assistant queue should handle these calls:
+            </p>
+            <Select value={selectedQueue} onValueChange={setSelectedQueue}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a queue" />
+              </SelectTrigger>
+              <SelectContent>
+                {queueOptions.map((queue) => (
+                  <SelectItem key={queue.id} value={queue.id}>
+                    {queue.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setQueueModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader className="animate-spin h-4 w-4" />
+                  Adding to Queue
+                </span>
+              ) : (
+                "Confirm"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

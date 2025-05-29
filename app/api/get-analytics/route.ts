@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
                             startedAt: "$$call.startedAt",
                             endedReason: "$$call.endedReason",
                             durationSeconds: "$$call.durationSeconds",
+                            transcript: "$$call.transcript",
+                            recordingUrl: "$$call.recordingUrl",
                             call: {
                                 id: "$$call.call.id",
                                 type: "$$call.call.type",
