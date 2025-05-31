@@ -1,6 +1,5 @@
 import User from "@/modals/User";
 import { type NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/connectDB";
 
 export async function GET(request: NextRequest) {

@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/connectDB'; // Adjust path as needed
-import User, { IUser } from '@/modals/User'; // Adjust path as needed
-
-import { getCurrentDayOfWeek, getCurrentTimeSlot } from '@/lib/utils'; // Adjust the path as necessary
+import connectDB from '@/lib/connectDB';
+import User, { IUser } from '@/modals/User';
+import { getCurrentDayOfWeek, getCurrentTimeSlot } from '@/lib/utils';
 import { currentUser } from '@clerk/nextjs/server';
 
 export async function POST(request: NextRequest) {
-    const user = await currentUser();
-    const clerkId = user?.id;
     try {
+        // Wait for the current user response
+        const user = await currentUser();
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+        
+        const clerkId = user.id;
         await connectDB();
 
         const { weeklySchedule } = await request.json();
 
-        if (!clerkId) {
-            return NextResponse.json(
-                { error: 'clerkId is required' },
-                { status: 400 }
-            );
-        }
-
-        const user = await User.findById(clerkId);
-        if (!user) {
+        const userDoc = await User.findById(clerkId);
+        if (!userDoc) {
             return NextResponse.json(
                 { error: 'User not found' },
                 { status: 404 }
@@ -29,13 +29,13 @@ export async function POST(request: NextRequest) {
         }
 
         if (weeklySchedule) {
-            user.weeklySchedule = weeklySchedule;
-            await user.save();
+            userDoc.weeklySchedule = weeklySchedule;
+            await userDoc.save();
         }
 
         return NextResponse.json({
             message: 'Schedule updated successfully',
-            weeklySchedule: user.weeklySchedule,
+            weeklySchedule: userDoc.weeklySchedule,
         });
     } catch (err) {
         console.error(
@@ -49,30 +49,33 @@ export async function POST(request: NextRequest) {
     }
 }
 
-
 export async function GET(request: NextRequest) {
-    const user = await currentUser();
-    const clerkId = user?.id;
     try {
-        await connectDB();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const user = await User.findById(clerkId).select("_id weeklySchedule") as IUser;
+        // Wait for the current user response
+        const user = await currentUser();
         if (!user) {
             return NextResponse.json(
-                { error: "User  not found" },
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+        
+        const clerkId = user.id;
+        await connectDB();
+
+        const userDoc = await User.findById(clerkId).select("_id weeklySchedule") as IUser;
+        if (!userDoc) {
+            return NextResponse.json(
+                { error: "User not found" },
                 { status: 404 }
             );
         }
 
         const currentDay = getCurrentDayOfWeek();
-        const currentTimeSlot = getCurrentTimeSlot(user.weeklySchedule, currentDay);
+        const currentTimeSlot = getCurrentTimeSlot(userDoc.weeklySchedule, currentDay);
 
         return NextResponse.json({
-            weeklySchedule: user.weeklySchedule || {},
+            weeklySchedule: userDoc.weeklySchedule || {},
             currentDay,
             currentTimeSlot,
         });

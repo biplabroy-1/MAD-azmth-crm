@@ -18,11 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, toZonedTime } from "date-fns-tz";
-
-// Define time zones
-const EST_TIMEZONE = "America/New_York";
-const UTC_TIMEZONE = "UTC";
+import { isEasternDaylightTime } from "@/lib/utils";
 
 // Define days of the week
 const days = [
@@ -48,8 +44,8 @@ interface Schedule {
       assistantId: string;
       callTimeStart: string;
       callTimeEnd: string;
-      utcTimeStart: string;
-      utcTimeEnd: string;
+      utcTimeStart?: string;
+      utcTimeEnd?: string;
     };
   };
 }
@@ -71,37 +67,46 @@ export default function SchedulePage() {
   const convertToUTC = useCallback((time: string, day: string): string => {
     if (!time) return "";
 
-    // Get current date
-    const today = new Date();
+    // Parse the input time
+    const [hours, minutes] = time
+      .split(":")
+      .map((part) => Number.parseInt(part, 10));
+    if (isNaN(hours) || isNaN(minutes)) return "";
 
-    // Find the target day of the week
+    // Get the current date and create a new date for the future day
+    const now = new Date();
+
+    // Find the day of week index (0 = Sunday, 6 = Saturday)
     const dayIndex = days.indexOf(day.toLowerCase());
-    const currentDayIndex = today.getDay(); // Sunday is 0, Monday is 1, etc.
+    const currentDayIndex = now.getDay();
 
-    // Calculate days to add to get to target day
+    // Calculate days to add to get to the target day
     const daysToAdd = (dayIndex - currentDayIndex + 7) % 7;
 
-    // Create date for target day
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysToAdd);
+    // Create a date for the target day
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + daysToAdd);
 
-    // Set the time on the target date
-    const [hours, minutes] = time.split(":");
-    targetDate.setHours(
-      Number.parseInt(hours, 10),
-      Number.parseInt(minutes, 10),
-      0,
-      0
-    );
+    // Set the EST time (which is what we're assuming the input is)
+    targetDate.setHours(hours, minutes, 0, 0);
 
-    // First create the EST time object
-    const estTime = toZonedTime(targetDate, EST_TIMEZONE);
+    // Check if target date is in EDT (Daylight Savings Time)
+    const isDST = isEasternDaylightTime(targetDate);
 
-    // Then convert it to UTC
-    const utcTime = toZonedTime(estTime, UTC_TIMEZONE);
+    // Manual EST/EDT to UTC conversion
+    // EST is UTC-5, EDT is UTC-4
+    let utcHours = hours + (isDST ? 4 : 5);
+    let utcMinutes = minutes;
 
-    // Format the UTC time as HH:mm
-    return format(utcTime, "HH:mm");
+    // Handle day boundary crossing
+    if (utcHours >= 24) {
+      utcHours -= 24;
+    }
+
+    // Format as HH:MM
+    return `${utcHours.toString().padStart(2, "0")}:${utcMinutes
+      .toString()
+      .padStart(2, "0")}`;
   }, []);
 
   useEffect(() => {
@@ -131,18 +136,21 @@ export default function SchedulePage() {
             return;
           }
         }
-
         const initSchedule: Schedule = {};
         days.forEach((day) => {
           initSchedule[day] = {};
           timeSlots.forEach((slot) => {
+            // Calculate UTC times using native JS immediately
+            const utcTimeStart = convertToUTC(slot.start, day);
+            const utcTimeEnd = convertToUTC(slot.end, day);
+
             initSchedule[day][slot.id] = {
               assistantName: "",
               assistantId: "",
               callTimeStart: slot.start,
               callTimeEnd: slot.end,
-              utcTimeStart: convertToUTC(slot.start, day),
-              utcTimeEnd: convertToUTC(slot.end, day),
+              utcTimeStart: utcTimeStart,
+              utcTimeEnd: utcTimeEnd,
             };
           });
         });
@@ -156,7 +164,6 @@ export default function SchedulePage() {
     };
     fetchData();
   }, [userId, timeSlots, convertToUTC]);
-
   const handleTimeChange = (
     day: string,
     slotId: string,
@@ -164,6 +171,7 @@ export default function SchedulePage() {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const time = event.target.value;
+    // Calculate UTC time immediately using native JS
     const utcTime = convertToUTC(time, day);
 
     setSchedule((prev) => ({
@@ -178,10 +186,13 @@ export default function SchedulePage() {
       },
     }));
   };
-
   const handleSelect = (day: string, slot: string, assistantId: string) => {
     const assistant = assistants.find((a) => a.id === assistantId);
     const timeSlot = timeSlots.find((t) => t.id === slot);
+
+    // Calculate the UTC times immediately using our native JS function
+    const utcTimeStart = convertToUTC(timeSlot?.start || "", day);
+    const utcTimeEnd = convertToUTC(timeSlot?.end || "", day);
 
     setSchedule((prev) => ({
       ...prev,
@@ -192,8 +203,8 @@ export default function SchedulePage() {
           assistantId: assistant?.id || "",
           callTimeStart: timeSlot?.start || "",
           callTimeEnd: timeSlot?.end || "",
-          utcTimeStart: convertToUTC(timeSlot?.start || "", day),
-          utcTimeEnd: convertToUTC(timeSlot?.end || "", day),
+          utcTimeStart: utcTimeStart,
+          utcTimeEnd: utcTimeEnd,
         },
       },
     }));
@@ -207,20 +218,21 @@ export default function SchedulePage() {
     setLoading(true);
     setStatus("");
     try {
-      // Convert all times to EST before sending to backend
+      // Create a clone of the schedule data
       const scheduleForBackend = { ...schedule };
 
-      // Convert times in each day and slot
+      // Update all UTC times based on current EST times
       Object.keys(scheduleForBackend).forEach((day) => {
         Object.keys(scheduleForBackend[day]).forEach((slotId) => {
           const slot = scheduleForBackend[day][slotId];
 
+          slot.callTimeStart = convertToUTC(slot.callTimeStart, day);
+          slot.callTimeEnd = convertToUTC(slot.callTimeEnd, day);
+          delete slot.utcTimeStart;
+          delete slot.utcTimeEnd;
           // Update UTC times based on the current EST times
           scheduleForBackend[day][slotId] = {
             ...slot,
-            // Convert local times to UTC for the backend
-            utcTimeStart: convertToUTC(slot.callTimeStart, day),
-            utcTimeEnd: convertToUTC(slot.callTimeEnd, day),
           };
         });
       });

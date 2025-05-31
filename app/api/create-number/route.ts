@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import { currentUser } from "@clerk/nextjs/server";
 import connectDB from "@/lib/connectDB";
 import User from "@/modals/User";
 

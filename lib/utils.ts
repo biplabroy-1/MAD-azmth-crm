@@ -80,3 +80,45 @@ export const getCurrentDayOfWeek = (): DayOfWeek => {
   const dayIndex = new Date().getDay();
   return days[dayIndex];
 };
+
+// Helper function to check if date is in EST DST
+export function isEasternDaylightTime(date: Date): boolean {
+
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0-11
+  const day = date.getDate(); // 1-31
+
+  if (month < 2 || month > 10) {
+    // January, February, December are always EST (not EDT)
+    return month < 2 ? false : false;
+  }
+
+  if (month > 2 && month < 10) {
+    // April through October are always EDT (except possibly early November)
+    return true;
+  }
+
+  // For March, EDT starts on the second Sunday at 2 AM
+  if (month === 2) {
+    // Calculate second Sunday
+    const secondSunday = new Date(year, 2, 1);
+    secondSunday.setDate(1 + (7 - secondSunday.getDay()) + 7); // First Sunday + 7 days
+
+    // Before second Sunday = EST, on or after = EDT
+    const dayOfMonth = secondSunday.getDate();
+    return day > dayOfMonth || (day === dayOfMonth && date.getHours() >= 2);
+  }
+
+  // For November, EDT ends on the first Sunday at 2 AM
+  if (month === 10) {
+    // Calculate first Sunday
+    const firstSunday = new Date(year, 10, 1);
+    firstSunday.setDate(1 + ((7 - firstSunday.getDay()) % 7));
+
+    // Before first Sunday = EDT, on or after = EST
+    const dayOfMonth = firstSunday.getDate();
+    return day < dayOfMonth || (day === dayOfMonth && date.getHours() < 2);
+  }
+
+  return false;
+}
