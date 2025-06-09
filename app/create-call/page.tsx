@@ -227,7 +227,7 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch("http://localhost:5000/api/queue-calls", {
+      const response = await fetch("https://backend-queue.globaltfn.tech/api/queue-calls", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
