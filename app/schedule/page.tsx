@@ -51,9 +51,9 @@ interface Schedule {
 }
 
 const initialTimeSlots = [
-  { id: "morning", start: "09:00", end: "12:00" },
-  { id: "afternoon", start: "13:00", end: "16:00" },
-  { id: "evening", start: "17:00", end: "20:00" },
+  { id: "morning", start: "09:00", end: "11:00" },
+  { id: "afternoon", start: "13:00", end: "15:00" },
+  { id: "evening", start: "18:00", end: "20:00" },
 ];
 
 export default function SchedulePage() {
