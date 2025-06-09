@@ -1,16 +1,19 @@
 import User from "@/modals/User";
 import { type NextRequest, NextResponse } from "next/server";
+
 import connectDB from "@/lib/connectDB";
+import { currentUser } from "@clerk/nextjs/server";
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const clerkId = request.headers.get("x-clerk-user-id");
-    if (!clerkId) {
+    const clerkUser = await currentUser();
+    if (!clerkUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await User.findOne({ clerkId });
+    const user = await User.findOne({ clerkId: clerkUser?.id });
+
 
     return NextResponse.json({
       twilioConfig: user?.twilioConfig || null,

@@ -12,12 +12,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Verify user exists
-        const userRecord = await User.findOne({ _id: user?.id });
-        if (!userRecord) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
-
         // Fetch all assistants from VAPI
         const response = await fetch("https://api.vapi.ai/assistant", {
             method: "GET",

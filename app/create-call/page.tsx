@@ -256,8 +256,6 @@ export default function CreateCall() {
           `${data.message}` || "Calls have been initiated successfully",
       });
 
-      // Navigate to call records page
-      router.push("/call-records");
     } catch (error: any) {
       console.error("Error creating calls:", error);
       toast({
