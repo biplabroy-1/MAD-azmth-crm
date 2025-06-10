@@ -102,21 +102,39 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
-    null
-  );
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("detailed");
+  const [filters, setFilters] = useState({
+    successOnly: true,
+    excludeVoicemail: true,
+    minDuration: 30,
+    startDate: '',
+    endDate: ''
+  });
+
+  // Debounce filter changes to prevent too many API calls
+  const debouncedFilters = useDebounce(filters, 500);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
+        // Build query parameters
+        const queryParams = new URLSearchParams({
+          successOnly: debouncedFilters.successOnly.toString(),
+          excludeVoicemail: debouncedFilters.excludeVoicemail.toString(),
+          minDuration: debouncedFilters.minDuration.toString(),
+          ...(debouncedFilters.startDate && { startDate: debouncedFilters.startDate }),
+          ...(debouncedFilters.endDate && { endDate: debouncedFilters.endDate })
+        });
+
         // Fetch both analytics endpoints in parallel
         const [analyticsResponse, overviewResponse] = await Promise.all([
-          fetch("/api/get-analytics"),
+          fetch(`/api/get-analytics?${queryParams.toString()}`),
           fetch("/api/overview"),
         ]);
 
@@ -133,9 +151,7 @@ export default function AnalyticsPage() {
         setAnalyticsData(analyticsResult);
         setOverviewData(overviewResult);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -143,7 +159,24 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [debouncedFilters]); // Use debounced filters instead of raw filters
+
+  // Add useDebounce hook at the top of the file, after imports
+  function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }, [value, delay]);
+
+    return debouncedValue;
+  }
 
   // Prepare chart data
   const prepareChartData = () => {
@@ -285,7 +318,7 @@ export default function AnalyticsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <h1 className="text-3xl font-bold">Call Analytics</h1>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="detailed">Detailed Analysis</TabsTrigger>
@@ -358,7 +391,7 @@ export default function AnalyticsPage() {
                       ).map(([assistant, queueCount]) => {
                         const completedCount =
                           overview.queueStats.assistantSpecific.completed?.[
-                            assistant
+                          assistant
                           ] || 0;
                         return (
                           <div
@@ -491,17 +524,99 @@ export default function AnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="detailed" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Detailed Analysis</h2>
-            <Button
-              variant="outline"
-              onClick={exportSuccessfulCallsToCSV}
-              disabled={!calls.length}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export Successful Calls
-            </Button>
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Detailed Analysis</h2>
+              <Button
+                variant="outline"
+                onClick={exportSuccessfulCallsToCSV}
+                disabled={!calls.length}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export Successful Calls
+              </Button>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Filter Controls</CardTitle>
+                <CardDescription>Customize your analytics view</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="successOnly"
+                        checked={filters.successOnly}
+                        onChange={(e) => setFilters(prev => ({ ...prev, successOnly: e.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="successOnly" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Success Only
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="excludeVoicemail"
+                        checked={filters.excludeVoicemail}
+                        onChange={(e) => setFilters(prev => ({ ...prev, excludeVoicemail: e.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="excludeVoicemail" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Exclude Voicemail
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="minDuration" className="text-sm font-medium leading-none">
+                        Minimum Duration (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        id="minDuration"
+                        value={filters.minDuration}
+                        onChange={(e) => setFilters(prev => ({ ...prev, minDuration: parseInt(e.target.value) || 0 }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="startDate" className="text-sm font-medium leading-none">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        id="startDate"
+                        value={filters.startDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="endDate" className="text-sm font-medium leading-none">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        id="endDate"
+                        value={filters.endDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -522,13 +637,13 @@ export default function AnalyticsPage() {
                 <div className="text-4xl font-bold">
                   {calls.length > 0
                     ? `${(
-                        calls.reduce(
-                          (acc, call) => acc + call.durationSeconds,
-                          0
-                        ) /
-                        calls.length /
-                        60
-                      ).toFixed(1)} min`
+                      calls.reduce(
+                        (acc, call) => acc + call.durationSeconds,
+                        0
+                      ) /
+                      calls.length /
+                      60
+                    ).toFixed(1)} min`
                     : "N/A"}
                 </div>
               </CardContent>
@@ -598,8 +713,8 @@ export default function AnalyticsPage() {
                         <TableCell>
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {
-                                addSuffix: true,
-                              })
+                              addSuffix: true,
+                            })
                             : "Unknown"}
                         </TableCell>
                       </TableRow>
