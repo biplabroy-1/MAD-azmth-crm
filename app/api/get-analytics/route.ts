@@ -4,104 +4,89 @@ import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 
 export async function GET(request: NextRequest) {
-    try {
-        const user = await currentUser();
-        
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+  try {
+    const user = await currentUser();
+    const clerkId = user?.id;
 
-        await connectDB();
-
-        // Get query parameters
-        const searchParams = request.nextUrl.searchParams;
-        const successOnly = searchParams.get('successOnly') === 'true';
-        const excludeVoicemail = searchParams.get('excludeVoicemail') === 'true';
-        const minDuration = parseInt(searchParams.get('minDuration') || '0');
-        const startDate = searchParams.get('startDate');
-        const endDate = searchParams.get('endDate');
-
-        // Build conditions array dynamically
-        const conditions = [];
-        
-        if (successOnly) {
-            conditions.push({ $eq: ["$$call.analysis.successEvaluation", "true"] });
-        }
-        
-        if (excludeVoicemail) {
-            conditions.push({ $ne: ["$$call.endedReason", "voicemail"] });
-        }
-        
-        if (minDuration > 0) {
-            conditions.push({ $gt: ["$$call.durationSeconds", minDuration] });
-        }
-        
-        if (startDate) {
-            conditions.push({ $gte: ["$$call.startedAt", new Date(startDate)] });
-        }
-        
-        if (endDate) {
-            conditions.push({ $lte: ["$$call.startedAt", new Date(endDate)] });
-        }
-
-        // Use default condition if none provided
-        const filterCondition = conditions.length > 0 
-            ? { $and: conditions } 
-            : { $expr: true }; // Match all if no conditions
-
-        const users = await User.aggregate([
-            {
-                $match: {
-                    _id: user.id
-                }
-            },
-            {
-                $project: {
-                    matchingCalls: {
-                        $filter: {
-                            input: "$fullCallData",
-                            as: "call",
-                            cond: filterCondition
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    matchingCalls: {
-                        $map: {
-                            input: "$matchingCalls",
-                            as: "call",
-                            in: {
-                                analysis: "$$call.analysis",
-                                startedAt: "$$call.startedAt",
-                                endedReason: "$$call.endedReason",
-                                durationSeconds: "$$call.durationSeconds",
-                                transcript: "$$call.transcript",
-                                recordingUrl: "$$call.recordingUrl",
-                                call: {
-                                    id: "$$call.call.id",
-                                    type: "$$call.call.type",
-                                    phoneNumber: "$$call.call.phoneNumber.twilioPhoneNumber",
-                                },
-                                customer: "$$call.customer",
-                                assistant: {
-                                    id: "$$call.assistant.id",
-                                    name: "$$call.assistant.name"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        ]);
-        
-        return NextResponse.json({ data: users }, { status: 200 });
-    } catch (error) {
-        console.error("Error in GET /api/get-analytics:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch analytics data" },
-            { status: 500 }
-        );
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await connectDB();
+
+    const searchParams = request.nextUrl.searchParams;
+    const successOnly = searchParams.get("successOnly") === "true";
+    const excludeVoicemail = searchParams.get("excludeVoicemail") === "true";
+    const minDuration = parseInt(searchParams.get("minDuration") || "0", 10);
+    const startDateRaw = searchParams.get("startDate");
+    const endDateRaw = searchParams.get("endDate");
+
+    const matchConditions: any = {};
+
+    if (startDateRaw) {
+      matchConditions["fullCallData.startedAt"] = {
+        ...(matchConditions["fullCallData.startedAt"] || {}),
+        $gt: new Date(startDateRaw).toISOString()
+      };
+    }
+
+    if (endDateRaw) {
+      matchConditions["fullCallData.startedAt"] = {
+        ...(matchConditions["fullCallData.startedAt"] || {}),
+        $lte: new Date(`${endDateRaw}T23:59:59.999Z`).toISOString()
+      };
+    }
+
+    if (successOnly) {
+      matchConditions["fullCallData.analysis.successEvaluation"] = "true";
+    }
+
+    if (excludeVoicemail) {
+      matchConditions["fullCallData.endedReason"] = { $ne: "voicemail" };
+    }
+
+    if (!isNaN(minDuration) && minDuration > 0) {
+      matchConditions["fullCallData.durationSeconds"] = { $gt: minDuration };
+    }
+
+    const users = await User.aggregate([
+      { $match: { clerkId } },
+      { $unwind: "$fullCallData" },
+      { $match: matchConditions },
+      {
+        $group: {
+          _id: "$clerkId",
+          matchingCalls: {
+            $push: {
+              analysis: "$fullCallData.analysis",
+              startedAt: "$fullCallData.startedAt",
+              endedReason: "$fullCallData.endedReason",
+              durationSeconds: "$fullCallData.durationSeconds",
+              transcript: "$fullCallData.transcript",
+              recordingUrl: "$fullCallData.recordingUrl",
+              call: {
+                id: "$fullCallData.call.id",
+                type: "$fullCallData.call.type",
+                phoneNumber: "$fullCallData.call.phoneNumber.twilioPhoneNumber"
+              },
+              customer: "$fullCallData.customer",
+              assistant: {
+                id: "$fullCallData.assistant.id",
+                name: "$fullCallData.assistant.name"
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    return NextResponse.json({ data: users }, { status: 200 });
+
+  } catch (error) {
+    console.error("❌ Error in GET /api/get-analytics:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch analytics data" },
+      { status: 500 }
+    );
+  }
 }

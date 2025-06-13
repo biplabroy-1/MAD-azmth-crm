@@ -27,10 +27,11 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { Download } from "lucide-react";
 import xlsx from "json-as-xlsx";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 
 // Register Chart.js components
 ChartJS.register(
@@ -74,11 +75,18 @@ interface OverviewData {
     email: string;
     queueStats: {
       totalInQueue: number;
-      totalCompleted: number;
+      totalInitiated: number;
       totalFailed: number;
+      totalCompleted: number;
       successRate: number;
       assistantSpecific: {
         queue: {
+          [key: string]: number;
+        };
+        initiated: {
+          [key: string]: number;
+        };
+        failed: {
           [key: string]: number;
         };
         completed: {
@@ -91,6 +99,7 @@ interface OverviewData {
       shortCallsCount: number;
       longCallsCount: number;
       successfulAnalysisCount: number;
+      successfulAnalysisWithoutVoicemailCount: number;
     };
   };
 }
@@ -112,11 +121,11 @@ export default function AnalyticsPage() {
     excludeVoicemail: true,
     minDuration: 30,
     startDate: '',
-    endDate: ''
+    endDate: format(new Date(), 'yyyy-MM-dd')
   });
 
   // Debounce filter changes to prevent too many API calls
-  const debouncedFilters = useDebounce(filters, 500);
+  const debouncedFilters = useDebounce(filters, 1000);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -345,6 +354,14 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">
+                      Initiated
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.queueStats.totalInitiated || 0}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Completed
                     </p>
                     <p className="text-2xl font-bold">
@@ -380,38 +397,58 @@ export default function AnalyticsPage() {
               <CardContent>
                 {overview?.queueStats.assistantSpecific && (
                   <div className="mt-4">
-                    <div className="max-h-[200px] overflow-auto">
-                      <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
+                    <div className="max-h-[300px] overflow-auto">
+                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
                         <div>Name</div>
                         <div className="text-center">In Queue</div>
                         <div className="text-center">Done</div>
+                        <div className="text-center">Initiated</div>
+                        <div className="text-center">Failed</div>
                       </div>
-                      {Object.entries(
-                        overview.queueStats.assistantSpecific.queue || {}
-                      ).map(([assistant, queueCount]) => {
-                        const completedCount =
-                          overview.queueStats.assistantSpecific.completed?.[
-                          assistant
-                          ] || 0;
-                        return (
-                          <div
-                            key={assistant}
-                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
-                          >
-                            <div className="font-medium">{assistant}</div>
-                            <div>
-                              <span className="inline-block bg-blue-100 text-blue-800 text-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
-                                {queueCount}
-                              </span>
+
+                      {Object.entries(overview.queueStats.assistantSpecific.queue || {}).map(
+                        ([assistant, queueCount]) => {
+                          const completed =
+                            overview.queueStats.assistantSpecific.completed?.[assistant] || 0;
+                          const initiated =
+                            overview.queueStats.assistantSpecific.initiated?.[assistant] || 0;
+                          const failed =
+                            overview.queueStats.assistantSpecific.failed?.[assistant] || 0;
+
+                          return (
+                            <div
+                              key={assistant}
+                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
+                            >
+                              <div className="font-medium">{assistant}</div>
+
+                              <div>
+                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {queueCount}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {completed}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {initiated}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {failed}
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="inline-block bg-green-100 text-green-800 text-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
-                                {completedCount}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        }
+                      )}
                     </div>
                   </div>
                 )}
@@ -451,10 +488,18 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">
-                      successful Analysis Count
+                      Successful Analysis Count with Voicemail
                     </p>
                     <p className="text-2xl font-bold">
                       {overview?.callDataStats.successfulAnalysisCount || 0}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Successful Analysis Count without Voicemail
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {overview?.callDataStats.successfulAnalysisWithoutVoicemailCount || 0}
                     </p>
                   </div>
                 </div>
@@ -701,13 +746,13 @@ export default function AnalyticsPage() {
                   {calls.length > 0 ? (
                     calls.map((call) => (
                       <TableRow key={call.call.id}>
-                        <TableCell>{call.call.phoneNumber}</TableCell>
+                        <TableCell>{call.customer.number}</TableCell>
                         <TableCell>
                           {call.customer?.name || "Unknown"}
                         </TableCell>
                         <TableCell>
                           {Math.floor(call.durationSeconds / 60)}m{" "}
-                          {call.durationSeconds % 60}s
+                          {Math.floor(call.durationSeconds % 60)}s
                         </TableCell>
                         <TableCell>{call.assistant.name}</TableCell>
                         <TableCell>
