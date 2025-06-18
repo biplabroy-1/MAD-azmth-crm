@@ -86,7 +86,7 @@ export default function CreateCall() {
     };
 
     fetchAssistants();
-  }, [toast]);
+  }, []);
 
   // Validate if a phone number has a country code
   const hasCountryCode = (number: string): boolean => {

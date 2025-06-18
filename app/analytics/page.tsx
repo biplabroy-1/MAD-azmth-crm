@@ -31,7 +31,8 @@ import { format, formatDistanceToNow } from "date-fns";
 import { Download } from "lucide-react";
 import xlsx from "json-as-xlsx";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@clerk/nextjs";
 
 // Register Chart.js components
 ChartJS.register(
@@ -111,7 +112,9 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null
+  );
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,9 +123,13 @@ export default function AnalyticsPage() {
     successOnly: true,
     excludeVoicemail: true,
     minDuration: 30,
-    startDate: '',
-    endDate: format(new Date(), 'yyyy-MM-dd')
+    startDate: "",
+    endDate: format(new Date(), "yyyy-MM-dd"),
   });
+  const [assistants, setAssistants] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const { userId } = useAuth();
 
   // Debounce filter changes to prevent too many API calls
   const debouncedFilters = useDebounce(filters, 1000);
@@ -137,8 +144,12 @@ export default function AnalyticsPage() {
           successOnly: debouncedFilters.successOnly.toString(),
           excludeVoicemail: debouncedFilters.excludeVoicemail.toString(),
           minDuration: debouncedFilters.minDuration.toString(),
-          ...(debouncedFilters.startDate && { startDate: debouncedFilters.startDate }),
-          ...(debouncedFilters.endDate && { endDate: debouncedFilters.endDate })
+          ...(debouncedFilters.startDate && {
+            startDate: debouncedFilters.startDate,
+          }),
+          ...(debouncedFilters.endDate && {
+            endDate: debouncedFilters.endDate,
+          }),
         });
 
         // Fetch both analytics endpoints in parallel
@@ -160,7 +171,9 @@ export default function AnalyticsPage() {
         setAnalyticsData(analyticsResult);
         setOverviewData(overviewResult);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -169,6 +182,39 @@ export default function AnalyticsPage() {
 
     fetchData();
   }, [debouncedFilters]); // Use debounced filters instead of raw filters
+
+  useEffect(() => {
+    const fetchAssistants = async () => {
+      try {
+        const response = await fetch("/api/get-assistants");
+        if (!response.ok) {
+          throw new Error("Failed to fetch assistants");
+        }
+
+        const data = await response.json();
+        if (data.success && Array.isArray(data.assistants)) {
+          // Format assistants as queue options
+          const formattedAssistants = data.assistants.map((assistant: any) => ({
+            id: assistant.id,
+            name: assistant.name || `Assistant ${assistant.id.slice(0, 6)}`,
+          }));
+
+          setAssistants(formattedAssistants);
+        } else {
+          console.error("Invalid assistants data format", data);
+        }
+      } catch (error) {
+        console.error("Error fetching assistants:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load assistants. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAssistants();
+  }, []);
 
   // Add useDebounce hook at the top of the file, after imports
   function useDebounce<T>(value: T, delay: number): T {
@@ -285,6 +331,32 @@ export default function AnalyticsPage() {
 
     xlsx(data, settings);
   };
+  function startQueue() {
+    fetch("https://backend-queue.globaltfn.tech/api/start-queue", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clerkId: userId,
+      }),
+    })
+      .then((response) => response.text())
+      .then(() =>
+        toast({
+          title: "Success",
+          description: "Started Queue",
+          variant: "default",
+        })
+      )
+      .catch((error) =>
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        })
+      );
+  }
 
   if (loading) {
     return (
@@ -325,9 +397,15 @@ export default function AnalyticsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <h1 className="text-3xl font-bold">Call Analytics</h1>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Call Analytics</h1>
+        <Button onClick={startQueue}>Start Queue</Button>
+      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="detailed">Detailed Analysis</TabsTrigger>
@@ -406,49 +484,59 @@ export default function AnalyticsPage() {
                         <div className="text-center">Failed</div>
                       </div>
 
-                      {Object.entries(overview.queueStats.assistantSpecific.queue || {}).map(
-                        ([assistant, queueCount]) => {
-                          const completed =
-                            overview.queueStats.assistantSpecific.completed?.[assistant] || 0;
-                          const initiated =
-                            overview.queueStats.assistantSpecific.initiated?.[assistant] || 0;
-                          const failed =
-                            overview.queueStats.assistantSpecific.failed?.[assistant] || 0;
+                      {Object.entries(
+                        overview.queueStats.assistantSpecific.queue || {}
+                      ).map(([assistant, queueCount]) => {
+                        const completed =
+                          overview.queueStats.assistantSpecific.completed?.[
+                            assistant
+                          ] || 0;
+                        const initiated =
+                          overview.queueStats.assistantSpecific.initiated?.[
+                            assistant
+                          ] || 0;
+                        const failed =
+                          overview.queueStats.assistantSpecific.failed?.[
+                            assistant
+                          ] || 0;
 
-                          return (
-                            <div
-                              key={assistant}
-                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
-                            >
-                              <div className="font-medium">{assistant}</div>
-
-                              <div>
-                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {queueCount}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {completed}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {initiated}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {failed}
-                                </span>
-                              </div>
+                        return (
+                          <div
+                            key={assistant}
+                            className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
+                          >
+                            <div className="font-medium">
+                              {assistants.map((ass) => {
+                                return assistant === ass.id ? ass.name : "";
+                              })}
                             </div>
-                          );
-                        }
-                      )}
+
+                            <div>
+                              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                {queueCount}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                {completed}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                {initiated}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                {failed}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -499,7 +587,8 @@ export default function AnalyticsPage() {
                       Successful Analysis Count without Voicemail
                     </p>
                     <p className="text-2xl font-bold">
-                      {overview?.callDataStats.successfulAnalysisWithoutVoicemailCount || 0}
+                      {overview?.callDataStats
+                        .successfulAnalysisWithoutVoicemailCount || 0}
                     </p>
                   </div>
                 </div>
@@ -596,10 +685,18 @@ export default function AnalyticsPage() {
                         type="checkbox"
                         id="successOnly"
                         checked={filters.successOnly}
-                        onChange={(e) => setFilters(prev => ({ ...prev, successOnly: e.target.checked }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            successOnly: e.target.checked,
+                          }))
+                        }
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <label htmlFor="successOnly" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      <label
+                        htmlFor="successOnly"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
                         Success Only
                       </label>
                     </div>
@@ -608,10 +705,18 @@ export default function AnalyticsPage() {
                         type="checkbox"
                         id="excludeVoicemail"
                         checked={filters.excludeVoicemail}
-                        onChange={(e) => setFilters(prev => ({ ...prev, excludeVoicemail: e.target.checked }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            excludeVoicemail: e.target.checked,
+                          }))
+                        }
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <label htmlFor="excludeVoicemail" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      <label
+                        htmlFor="excludeVoicemail"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
                         Exclude Voicemail
                       </label>
                     </div>
@@ -619,14 +724,22 @@ export default function AnalyticsPage() {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="minDuration" className="text-sm font-medium leading-none">
+                      <label
+                        htmlFor="minDuration"
+                        className="text-sm font-medium leading-none"
+                      >
                         Minimum Duration (seconds)
                       </label>
                       <input
                         type="number"
                         id="minDuration"
                         value={filters.minDuration}
-                        onChange={(e) => setFilters(prev => ({ ...prev, minDuration: parseInt(e.target.value) || 0 }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            minDuration: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         min="0"
                       />
@@ -635,26 +748,42 @@ export default function AnalyticsPage() {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="startDate" className="text-sm font-medium leading-none">
+                      <label
+                        htmlFor="startDate"
+                        className="text-sm font-medium leading-none"
+                      >
                         Start Date
                       </label>
                       <input
                         type="date"
                         id="startDate"
                         value={filters.startDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            startDate: e.target.value,
+                          }))
+                        }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="endDate" className="text-sm font-medium leading-none">
+                      <label
+                        htmlFor="endDate"
+                        className="text-sm font-medium leading-none"
+                      >
                         End Date
                       </label>
                       <input
                         type="date"
                         id="endDate"
                         value={filters.endDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            endDate: e.target.value,
+                          }))
+                        }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </div>
@@ -682,13 +811,13 @@ export default function AnalyticsPage() {
                 <div className="text-4xl font-bold">
                   {calls.length > 0
                     ? `${(
-                      calls.reduce(
-                        (acc, call) => acc + call.durationSeconds,
-                        0
-                      ) /
-                      calls.length /
-                      60
-                    ).toFixed(1)} min`
+                        calls.reduce(
+                          (acc, call) => acc + call.durationSeconds,
+                          0
+                        ) /
+                        calls.length /
+                        60
+                      ).toFixed(1)} min`
                     : "N/A"}
                 </div>
               </CardContent>
@@ -758,8 +887,8 @@ export default function AnalyticsPage() {
                         <TableCell>
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {
-                              addSuffix: true,
-                            })
+                                addSuffix: true,
+                              })
                             : "Unknown"}
                         </TableCell>
                       </TableRow>
