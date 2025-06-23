@@ -10,6 +10,8 @@ import {
 } from "@clerk/nextjs";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/toaster";
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +38,8 @@ export default function RootLayout({
           {" "}
           <header className="flex justify-between items-center p-4 h-16">
             <Toaster />
+            <SpeedInsights />
+            <Analytics />
             <nav className="flex gap-6">
               <SignedIn>
                 <Link className="hover:text-blue-500" href="/schedule">
