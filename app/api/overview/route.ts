@@ -1,232 +1,103 @@
+// filepath: app/api/analytics/route.ts
+
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/connectDB';
 import User from '@/modals/User';
-import type { NextRequest } from 'next/server';
+import {CallQueue} from '@/modals/callQueue';
+import {CallQueueDone} from '@/modals/callQueueDone';
+import CallData from '@/modals/callData.model';
 import { currentUser } from '@clerk/nextjs/server';
+import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
-    try {
+  try {
         const user = await currentUser();
-        await connectDB();
 
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const aggregateResult = await User.aggregate([
-            {
-                $match: {
-                    _id: user?.id
-                }
-            },
-            {
-                $project: {
-                    callQueueArray: {
-                        $reduce: {
-                            input: { $objectToArray: { $ifNull: ["$callQueue", {}] } },
-                            initialValue: [],
-                            in: { $concatArrays: ["$$value", "$$this.v"] }
-                        }
-                    },
-                    callQueueDoneArray: {
-                        $reduce: {
-                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
-                            initialValue: [],
-                            in: { $concatArrays: ["$$value", "$$this.v"] }
-                        }
-                    },
-                    fullCallData: { $ifNull: ["$fullCallData", []] },
-                    assistantQueueSizes: {
-                        $map: {
-                            input: { $objectToArray: { $ifNull: ["$callQueue", {}] } },
-                            as: "entry",
-                            in: {
-                                k: "$$entry.k",
-                                v: { $size: { $ifNull: ["$$entry.v", []] } }
-                            }
-                        }
-                    },
-                    assistantQueueDoneSizes: {
-                        $map: {
-                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
-                            as: "entry",
-                            in: {
-                                k: "$$entry.k",
-                                v: { $size: { $ifNull: ["$$entry.v", []] } }
-                            }
-                        }
-                    },
-                    assistantFailedCount: {
-                        $map: {
-                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
-                            as: "entry",
-                            in: {
-                                k: "$$entry.k",
-                                v: {
-                                    $size: {
-                                        $filter: {
-                                            input: "$$entry.v",
-                                            as: "call",
-                                            cond: { $eq: ["$$call.status", "failed_to_initiate"] }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    assistantInitiatedCount: {
-                        $map: {
-                            input: { $objectToArray: { $ifNull: ["$callQueueDone", {}] } },
-                            as: "entry",
-                            in: {
-                                k: "$$entry.k",
-                                v: {
-                                    $size: {
-                                        $filter: {
-                                            input: "$$entry.v",
-                                            as: "call",
-                                            cond: { $eq: ["$$call.status", "initiated"] }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    callQueueLength: { $size: "$callQueueArray" },
-                    callQueueDoneLength: { $size: "$callQueueDoneArray" },
-                    callQueueFailed: {
-                        $size: {
-                            $filter: {
-                                input: "$callQueueDoneArray",
-                                as: "call",
-                                cond: { $eq: ["$$call.status", "failed_to_initiate"] }
-                            }
-                        }
-                    },
-                    initiatedCalls: {
-                        $size: {
-                            $filter: {
-                                input: "$callQueueDoneArray",
-                                as: "call",
-                                cond: { $eq: ["$$call.status", "initiated"] }
-                            }
-                        }
-                    },
-                    fullCallDataLength: { $size: "$fullCallData" },
-                    shortCalls: {
-                        $size: {
-                            $filter: {
-                                input: "$fullCallData",
-                                as: "call",
-                                cond: { $lt: [{ $ifNull: ["$$call.durationSeconds", 0] }, 30] }
-                            }
-                        }
-                    },
-                    longCalls: {
-                        $size: {
-                            $filter: {
-                                input: "$fullCallData",
-                                as: "call",
-                                cond: { $gt: [{ $ifNull: ["$$call.durationSeconds", 0] }, 30] }
-                            }
-                        }
-                    },
-                    successfulAnalysisCount: {
-                        $size: {
-                            $filter: {
-                                input: "$fullCallData",
-                                as: "call",
-                                cond: {
-                                    $and: [
-                                        { $eq: ["$$call.analysis.successEvaluation", "true"] }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    successfulAnalysisWithoutVoicemailCount: {
-                        $size: {
-                            $filter: {
-                                input: "$fullCallData",
-                                as: "call",
-                                cond: {
-                                    $and: [
-                                        { $eq: ["$$call.analysis.successEvaluation", "true"] },
-                                        { $ne: ["$$call.endedReason", "voicemail"] }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    assistantSpecificQueue: { $arrayToObject: "$assistantQueueSizes" },
-                    assistantSpecificQueueDone: { $arrayToObject: "$assistantQueueDoneSizes" },
-                    assistantSpecificFailed: { $arrayToObject: "$assistantFailedCount" },
-                    assistantSpecificInitiated: { $arrayToObject: "$assistantInitiatedCount" }
-                }
-            },
-            {
-                $project: {
-                    queueStats: {
-                        totalInQueue: "$callQueueLength",
-                        totalInitiated: "$callQueueDoneLength",
-                        totalFailed: "$callQueueFailed",
-                        totalCompleted: "$initiatedCalls",
-                        successRate: {
-                            $cond: [
-                                { $eq: ["$callQueueDoneLength", 0] },
-                                0,
-                                {
-                                    $multiply: [
-                                        {
-                                            $divide: [
-                                                { $subtract: ["$callQueueDoneLength", "$callQueueFailed"] },
-                                                "$callQueueDoneLength"
-                                            ]
-                                        },
-                                        100
-                                    ]
-                                }
-                            ]
-                        },
-                        assistantSpecific: {
-                            queue: "$assistantSpecificQueue",
-                            initiated: "$assistantSpecificQueueDone",
-                            failed: "$assistantSpecificFailed",
-                            completed: "$assistantSpecificInitiated",
-                        }
-                    },
-                    callDataStats: {
-                        totalCallRecords: "$fullCallDataLength",
-                        shortCallsCount: "$shortCalls",
-                        longCallsCount: "$longCalls",
-                        successfulAnalysisCount: "$successfulAnalysisCount",
-                        successfulAnalysisWithoutVoicemailCount: "$successfulAnalysisWithoutVoicemailCount"
-                    }
-                }
-            }
-        ]);
+    await connectDB();
+    const userDoc = await User.findOne({ clerkId: user.id });
+    if (!userDoc) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-        const userData = aggregateResult[0] || {
-            queueStats: {
-                totalInQueue: 0,
-                totalCompleted: 0,
-                totalFailed: 0,
-                totalInitiated: 0,
-                successRate: 0,
-                assistantSpecific: {}
-            },
-            callDataStats: {
-                totalCallRecords: 0,
-                shortCallsCount: 0,
-                longCallsCount: 0,
-                successfulAnalysisCount: 0
-            }
+    const userId = userDoc._id;
+
+    // Count total in queue (pending calls)
+    const totalInQueue = await CallQueue.countDocuments({ userId, status: 'pending' });
+
+    // Count completed and failed from CallQueueDone
+    const totalInitiated = await CallQueueDone.countDocuments({ userId });
+    const totalFailed = await CallQueueDone.countDocuments({ userId, status: 'failed' });
+    const totalCompleted = await CallQueueDone.countDocuments({ userId, status: 'initiated' });
+
+    const assistantGroupStats = await CallQueueDone.aggregate([
+      { $match: { userId } },
+      {
+        $group: {
+          _id: { agentId: '$agentId', status: '$status' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Organize assistant-specific stats
+    const assistantStats: Record<string, any> = {};
+    assistantGroupStats.forEach(({ _id, count }) => {
+      const { agentId, status } = _id;
+      if (!assistantStats[agentId]) {
+        assistantStats[agentId] = {
+          initiated: 0,
+          failed: 0,
+          completed: 0
         };
+      }
+      if (status === 'initiated') assistantStats[agentId].completed = count;
+      if (status === 'failed') assistantStats[agentId].failed = count;
+      assistantStats[agentId].initiated += count;
+    });
 
-        return NextResponse.json({ data: userData }, { status: 200 });
-    } catch (error) {
-        console.error('Error fetching analytics:', error);
-        return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
-    }
+    // CallData analysis
+    const fullCallData = await CallData.find({ userId });
+    const shortCalls = fullCallData.filter(c => (c.durationSeconds ?? 0) < 30).length;
+    const longCalls = fullCallData.filter(c => (c.durationSeconds ?? 0) >= 30).length;
+    const successfulAnalysisCount = fullCallData.filter(
+      c => c.analysis?.successEvaluation === 'true'
+    ).length;
+
+    const successfulAnalysisWithoutVoicemailCount = fullCallData.filter(
+      c => c.analysis?.successEvaluation === 'true' && c.endedReason !== 'voicemail'
+    ).length;
+
+    const totalCallRecords = fullCallData.length;
+
+    const successRate =
+      totalInitiated === 0
+        ? 0
+        : (((totalInitiated - totalFailed) / totalInitiated) * 100).toFixed(2);
+
+    return NextResponse.json(
+      {
+        data: {
+          queueStats: {
+            totalInQueue,
+            totalInitiated,
+            totalFailed,
+            totalCompleted,
+            successRate: Number(successRate),
+            assistantSpecific: assistantStats
+          },
+          callDataStats: {
+            totalCallRecords,
+            shortCallsCount: shortCalls,
+            longCallsCount: longCalls,
+            successfulAnalysisCount,
+            successfulAnalysisWithoutVoicemailCount
+          }
+        }
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('❌ Error fetching analytics:', error);
+    return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });
+  }
 }

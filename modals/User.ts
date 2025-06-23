@@ -45,19 +45,10 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
-  phoneNumber: string;
+
   twilioConfig: TwilioConfig;
   assistantId: string;
   content: string;
-
-  // New structure for assistant queues
-  callQueue: Record<string, Contact[]>; // assistantId: Contact[]
-  callQueueDone: Record<string, (Contact & { status?: string })[]>;
-
-  fullCallData?: Record<string, any>[];
-
-  defaultCallTimeStart: string;
-  defaultCallTimeEnd: string;
 
   weeklySchedule?: WeeklySchedule;
 
@@ -66,16 +57,6 @@ export interface IUser extends Document {
 }
 
 /** ────── Schema Definitions ────── **/
-
-const ContactSchema = new Schema<Contact>(
-  {
-    name: { type: String, required: true },
-    number: { type: String, required: true },
-    assistantId: { type: String, required: true },
-    status: { type: String }
-  },
-  { _id: false }
-);
 
 const ScheduleSlotSchema = new Schema<ScheduleSlot>(
   {
@@ -109,8 +90,6 @@ const WeeklyScheduleSchema = new Schema<WeeklySchedule>(
   { _id: false }
 );
 
-const FullCallDataSchema = new Schema({}, { strict: false, _id: false });
-
 const TwilioConfigSchema = new Schema<TwilioConfig>(
   {
     sid: { type: String, required: true },
@@ -130,20 +109,7 @@ const UserSchema = new Schema<IUser>(
     profileImageUrl: String,
 
     twilioConfig: { type: TwilioConfigSchema, required: true },
-    assistantId: { type: String, required: true },
     content: { type: String },
-
-    callQueue: {
-      type: Object,
-      default: () => ({})
-    },
-
-    callQueueDone: {
-      type: Object,
-      default: () => ({})
-    },
-
-    fullCallData: [FullCallDataSchema],
 
     weeklySchedule: { type: WeeklyScheduleSchema }
   },

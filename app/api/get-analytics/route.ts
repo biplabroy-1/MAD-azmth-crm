@@ -1,5 +1,8 @@
+// filepath: app/api/get-analytics/route.ts
+
 import connectDB from "@/lib/connectDB";
 import User from "@/modals/User";
+import CallData from "@/modals/callData.model";
 import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 
@@ -14,6 +17,11 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    const userDoc = await User.findOne({ clerkId });
+    if (!userDoc) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const successOnly = searchParams.get("successOnly") === "true";
     const excludeVoicemail = searchParams.get("excludeVoicemail") === "true";
@@ -21,66 +29,53 @@ export async function GET(request: NextRequest) {
     const startDateRaw = searchParams.get("startDate");
     const endDateRaw = searchParams.get("endDate");
 
-    const matchConditions: any = {};
+    const filters: any = { userId: userDoc._id };
 
     if (startDateRaw) {
-      matchConditions["fullCallData.startedAt"] = {
-        ...(matchConditions["fullCallData.startedAt"] || {}),
+      filters["startedAt"] = {
+        ...(filters["startedAt"] || {}),
         $gt: new Date(startDateRaw).toISOString()
       };
     }
 
     if (endDateRaw) {
-      matchConditions["fullCallData.startedAt"] = {
-        ...(matchConditions["fullCallData.startedAt"] || {}),
+      filters["startedAt"] = {
+        ...(filters["startedAt"] || {}),
         $lte: new Date(`${endDateRaw}T23:59:59.999Z`).toISOString()
       };
     }
+    console.log(filters);
+    
 
     if (successOnly) {
-      matchConditions["fullCallData.analysis.successEvaluation"] = "true";
+      filters["analysis.successEvaluation"] = "true";
     }
 
     if (excludeVoicemail) {
-      matchConditions["fullCallData.endedReason"] = { $ne: "voicemail" };
+      filters.endedReason = { $ne: "voicemail" };
     }
 
     if (!isNaN(minDuration) && minDuration > 0) {
-      matchConditions["fullCallData.durationSeconds"] = { $gt: minDuration };
+      filters.durationSeconds = { $gt: minDuration };
     }
 
-    const users = await User.aggregate([
-      { $match: { clerkId } },
-      { $unwind: "$fullCallData" },
-      { $match: matchConditions },
-      {
-        $group: {
-          _id: "$clerkId",
-          matchingCalls: {
-            $push: {
-              analysis: "$fullCallData.analysis",
-              startedAt: "$fullCallData.startedAt",
-              endedReason: "$fullCallData.endedReason",
-              durationSeconds: "$fullCallData.durationSeconds",
-              transcript: "$fullCallData.transcript",
-              recordingUrl: "$fullCallData.recordingUrl",
-              call: {
-                id: "$fullCallData.call.id",
-                type: "$fullCallData.call.type",
-                phoneNumber: "$fullCallData.call.phoneNumber.twilioPhoneNumber"
-              },
-              customer: "$fullCallData.customer",
-              assistant: {
-                id: "$fullCallData.assistant.id",
-                name: "$fullCallData.assistant.name"
-              }
-            }
-          }
-        }
-      }
-    ]);
+    const calls = await CallData.find(filters)
+      .sort({ startedAt: -1 })
+      .select({
+        _id:1,
+        analysis: 1,
+        startedAt: 1,
+        endedReason: 1,
+        durationSeconds: 1,
+        transcript: 1,
+        recordingUrl: 1,
+        call: 1,
+        customer: 1,
+        assistant: 1
+      })
+      .lean();
 
-    return NextResponse.json({ data: users }, { status: 200 });
+    return NextResponse.json({ data: calls }, { status: 200 });
 
   } catch (error) {
     console.error("❌ Error in GET /api/get-analytics:", error);

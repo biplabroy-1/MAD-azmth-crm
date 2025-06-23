@@ -3,10 +3,12 @@ import { redirect } from 'next/navigation';
 import connectDB from "@/lib/connectDB";
 import User from '@/modals/User';
 
+export const dynamic = 'force-dynamic';
+
 const AuthCallbackPage = async () => {
     try {
         const user = await currentUser();
-        
+
         if (!user?.id || !user?.primaryEmailAddress?.emailAddress) {
             return redirect("/");
         }
@@ -30,7 +32,7 @@ const AuthCallbackPage = async () => {
                 profileImageUrl: user.imageUrl
             });
         }
-        
+
         return redirect("/");
     } catch (error) {
         console.error("Auth callback error:", error);

@@ -46,28 +46,29 @@ ChartJS.register(
 );
 
 interface AnalyticsCallRecord {
-  analysis: {
-    successEvaluation: string;
-    summary: string;
+  _id: string;
+  analysis?: {
+    successEvaluation?: string;
+    summary?: string;
   };
-  startedAt: string;
-  endedReason: string;
-  durationSeconds: number;
-  call: {
-    id: string;
-    type: string;
-    phoneNumber: string;
+  startedAt?: string;
+  endedReason?: string;
+  durationSeconds?: number;
+  call?: {
+    id?: string;
+    type?: string;
+    phoneNumber?: string;
   };
-  customer: {
-    name: string;
-    number: string;
+  customer?: {
+    name?: string;
+    number?: string;
   };
-  assistant: {
-    id: string;
-    name: string;
+  assistant?: {
+    id?: string;
+    name?: string;
   };
-  transcript: string;
-  recordingUrl: string;
+  transcript?: string;
+  recordingUrl?: string;
 }
 
 interface OverviewData {
@@ -81,18 +82,7 @@ interface OverviewData {
       totalCompleted: number;
       successRate: number;
       assistantSpecific: {
-        queue: {
-          [key: string]: number;
-        };
-        initiated: {
-          [key: string]: number;
-        };
-        failed: {
-          [key: string]: number;
-        };
-        completed: {
-          [key: string]: number;
-        };
+        [assistantId: string]: AssistantAggregatedStats;
       };
     };
     callDataStats: {
@@ -105,10 +95,14 @@ interface OverviewData {
   };
 }
 
+interface AssistantAggregatedStats {
+  initiated: number;
+  failed: number;
+  completed: number;
+}
+
 interface AnalyticsData {
-  data: Array<{
-    matchingCalls: AnalyticsCallRecord[];
-  }>;
+  data: AnalyticsCallRecord[];
 }
 
 export default function AnalyticsPage() {
@@ -235,12 +229,12 @@ export default function AnalyticsPage() {
 
   // Prepare chart data
   const prepareChartData = () => {
-    if (!analyticsData?.data?.[0]?.matchingCalls) return null;
+    if (!analyticsData?.data) return null;
 
-    const calls = analyticsData.data[0].matchingCalls;
+    const calls = analyticsData.data;
 
     // For duration distribution
-    const durationRanges = {
+    const durationRanges: Record<string, number> = {
       "30-60s": 0,
       "1-2m": 0,
       "2-5m": 0,
@@ -248,11 +242,11 @@ export default function AnalyticsPage() {
     };
 
     calls.forEach((call) => {
-      const duration = call.durationSeconds;
-      if (duration <= 60) durationRanges["30-60s"]++;
-      else if (duration <= 120) durationRanges["1-2m"]++;
-      else if (duration <= 300) durationRanges["2-5m"]++;
-      else durationRanges["5m+"]++;
+      const duration = call.durationSeconds ?? 0;
+      if (duration > 0 && duration <= 60) durationRanges["30-60s"]++;
+      else if (duration > 60 && duration <= 120) durationRanges["1-2m"]++;
+      else if (duration > 120 && duration <= 300) durationRanges["2-5m"]++;
+      else if (duration > 300) durationRanges["5m+"]++;
     });
 
     return {
@@ -283,6 +277,10 @@ export default function AnalyticsPage() {
 
   const chartData = prepareChartData();
 
+  const calls: AnalyticsCallRecord[] = analyticsData?.data || [];
+  const overview = overviewData?.data;
+  const assistantSpecificData = overview?.queueStats.assistantSpecific || {};
+
   const exportSuccessfulCallsToCSV = () => {
     if (!calls.length) return;
 
@@ -303,26 +301,29 @@ export default function AnalyticsPage() {
           { label: "Transcript", value: "transcript" },
         ],
         content: calls.map((call) => ({
-          phoneNumber: call.call.phoneNumber,
-          customerName: call.customer?.name || "Unknown",
-          customerNumber: call.customer?.number || "Unknown",
-          duration: `${Math.floor(call.durationSeconds / 60)}m ${(
-            call.durationSeconds % 60
-          ).toFixed(2)}s`,
-
-          assistant: call.assistant.name,
-          startedAt: new Date(call.startedAt).toLocaleString(),
-          endedReason: call.endedReason || "N/A",
-          successEvaluation: call.analysis?.successEvaluation || "N/A",
-          recordingUrl: call.recordingUrl || "N/A",
-          analysisSummary: call.analysis?.summary || "N/A",
-          transcript: call.transcript || "N/A",
+          phoneNumber: call.call?.phoneNumber ?? "Unknown",
+          customerName: call.customer?.name ?? "Unknown",
+          customerNumber: call.customer?.number ?? "Unknown",
+          duration: call.durationSeconds !== undefined
+            ? `${Math.floor(call.durationSeconds / 60)}m ${(
+                call.durationSeconds % 60
+              ).toFixed(2)}s`
+            : "N/A",
+          assistant: call.assistant?.name ?? "Unknown",
+          startedAt: call.startedAt
+            ? new Date(call.startedAt).toLocaleString()
+            : "Unknown",
+          endedReason: call.endedReason ?? "N/A",
+          successEvaluation: call.analysis?.successEvaluation ?? "N/A",
+          recordingUrl: call.recordingUrl ?? "N/A",
+          analysisSummary: call.analysis?.summary ?? "N/A",
+          transcript: call.transcript ?? "N/A",
         })),
       },
     ];
 
     const settings = {
-      fileName: "SuccessfulCalls",
+      fileName: "SuccessfulCalls Last "+ filters.endDate,
       extraLength: 0,
       writeMode: "writeFile",
       writeOptions: {},
@@ -331,6 +332,7 @@ export default function AnalyticsPage() {
 
     xlsx(data, settings);
   };
+
   function startQueue() {
     fetch("https://backend-queue.globaltfn.tech/api/start-queue", {
       method: "POST",
@@ -391,9 +393,6 @@ export default function AnalyticsPage() {
       </div>
     );
   }
-
-  const calls = analyticsData?.data?.[0]?.matchingCalls || [];
-  const overview = overviewData?.data;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -467,73 +466,64 @@ export default function AnalyticsPage() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Queue Stats</CardTitle>
+                <CardTitle>Queue Stats Per Assistent</CardTitle>
                 <CardDescription>
-                  Current call processing status
+                  Current call processing status per Assistent
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {overview?.queueStats.assistantSpecific && (
                   <div className="mt-4">
                     <div className="max-h-[300px] overflow-auto">
+                      {/* Updated Grid Columns: Removed 'In Queue' column */}
                       <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
                         <div>Name</div>
-                        <div className="text-center">In Queue</div>
+                        {/* Removed: <div className="text-center">In Queue</div> */}
+                        <div className="text-center">Initiated</div> {/* Moved initiated */}
                         <div className="text-center">Done</div>
-                        <div className="text-center">Initiated</div>
                         <div className="text-center">Failed</div>
                       </div>
 
-                      {Object.entries(
-                        overview.queueStats.assistantSpecific.queue || {}
-                      ).map(([assistant, queueCount]) => {
-                        const completed =
-                          overview.queueStats.assistantSpecific.completed?.[
-                            assistant
-                          ] || 0;
-                        const initiated =
-                          overview.queueStats.assistantSpecific.initiated?.[
-                            assistant
-                          ] || 0;
-                        const failed =
-                          overview.queueStats.assistantSpecific.failed?.[
-                            assistant
-                          ] || 0;
+                      {Object.entries(assistantSpecificData).map(([assistantId, stats]) => {
+                        // Now 'stats' directly contains initiated, completed, failed
+                        const initiated = stats.initiated || 0;
+                        const completed = stats.completed || 0;
+                        const failed = stats.failed || 0;
+
+                        // Find assistant name using assistantId
+                        const assistantName =
+                          assistants.find((ass) => ass.id === assistantId)?.name || 'Unknown Assistant';
 
                         return (
                           <div
-                            key={assistant}
+                            key={assistantId} // Use assistantId as key
                             className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
                           >
                             <div className="font-medium">
-                              {assistants.map((ass) => {
-                                return assistant === ass.id ? ass.name : "";
-                              })}
+                              {assistantName}
                             </div>
 
-                            <div>
-                              <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {queueCount}
-                              </span>
-                            </div>
-
-                            <div>
-                              <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {completed}
-                              </span>
-                            </div>
-
+                            {/* Display Initiated */}
                             <div>
                               <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
                                 {initiated}
                               </span>
                             </div>
 
+                            {/* Display Done (Completed) */}
+                            <div>
+                              <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                {completed}
+                              </span>
+                            </div>
+
+                            {/* Display Failed */}
                             <div>
                               <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
                                 {failed}
                               </span>
                             </div>
+
                           </div>
                         );
                       })}
@@ -812,7 +802,7 @@ export default function AnalyticsPage() {
                   {calls.length > 0
                     ? `${(
                         calls.reduce(
-                          (acc, call) => acc + call.durationSeconds,
+                          (acc, call) => acc + (call.durationSeconds ?? 0),
                           0
                         ) /
                         calls.length /
@@ -820,18 +810,6 @@ export default function AnalyticsPage() {
                       ).toFixed(1)} min`
                     : "N/A"}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Success Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-green-500">100%</div>
-                <p className="text-muted-foreground">
-                  Filtered for successful calls only
-                </p>
               </CardContent>
             </Card>
           </div>
@@ -874,16 +852,17 @@ export default function AnalyticsPage() {
                 <TableBody>
                   {calls.length > 0 ? (
                     calls.map((call) => (
-                      <TableRow key={call.call.id}>
-                        <TableCell>{call.customer.number}</TableCell>
+                      <TableRow key={call._id}>
+                        <TableCell>{call.customer?.number ?? "Unknown"}</TableCell>
                         <TableCell>
                           {call.customer?.name || "Unknown"}
                         </TableCell>
                         <TableCell>
-                          {Math.floor(call.durationSeconds / 60)}m{" "}
-                          {Math.floor(call.durationSeconds % 60)}s
+                          {call.durationSeconds !== undefined
+                            ? `${Math.floor(call.durationSeconds / 60)}m ${Math.floor(call.durationSeconds % 60)}s`
+                            : "N/A"}
                         </TableCell>
-                        <TableCell>{call.assistant.name}</TableCell>
+                        <TableCell>{call.assistant?.name ?? "Unknown"}</TableCell>
                         <TableCell>
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {
