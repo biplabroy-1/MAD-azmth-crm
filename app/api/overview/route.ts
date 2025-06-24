@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         };
       }
       if (status === 'initiated') assistantStats[agentId].completed = count;
-      if (status === 'failed') assistantStats[agentId].failed = count;
+      if (status === 'failed' || status === 'failed_to_initiate') assistantStats[agentId].failed = count;
       assistantStats[agentId].initiated += count;
     });
 
