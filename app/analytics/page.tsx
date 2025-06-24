@@ -96,6 +96,7 @@ interface OverviewData {
 }
 
 interface AssistantAggregatedStats {
+  queued: number;
   initiated: number;
   failed: number;
   completed: number;
@@ -304,11 +305,12 @@ export default function AnalyticsPage() {
           phoneNumber: call.call?.phoneNumber ?? "Unknown",
           customerName: call.customer?.name ?? "Unknown",
           customerNumber: call.customer?.number ?? "Unknown",
-          duration: call.durationSeconds !== undefined
-            ? `${Math.floor(call.durationSeconds / 60)}m ${(
-                call.durationSeconds % 60
-              ).toFixed(2)}s`
-            : "N/A",
+          duration:
+            call.durationSeconds !== undefined
+              ? `${Math.floor(call.durationSeconds / 60)}m ${(
+                  call.durationSeconds % 60
+                ).toFixed(2)}s`
+              : "N/A",
           assistant: call.assistant?.name ?? "Unknown",
           startedAt: call.startedAt
             ? new Date(call.startedAt).toLocaleString()
@@ -323,7 +325,7 @@ export default function AnalyticsPage() {
     ];
 
     const settings = {
-      fileName: "SuccessfulCalls Last "+ filters.endDate,
+      fileName: "SuccessfulCalls Last " + filters.endDate,
       extraLength: 0,
       writeMode: "writeFile",
       writeOptions: {},
@@ -478,55 +480,62 @@ export default function AnalyticsPage() {
                       {/* Updated Grid Columns: Removed 'In Queue' column */}
                       <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
                         <div>Name</div>
-                        {/* Removed: <div className="text-center">In Queue</div> */}
-                        <div className="text-center">Initiated</div> {/* Moved initiated */}
+                        <div className="text-center">In Queue</div>
+                        <div className="text-center">Initiated</div>{" "}
+                        {/* Moved initiated */}
                         <div className="text-center">Done</div>
                         <div className="text-center">Failed</div>
                       </div>
 
-                      {Object.entries(assistantSpecificData).map(([assistantId, stats]) => {
-                        // Now 'stats' directly contains initiated, completed, failed
-                        const initiated = stats.initiated || 0;
-                        const completed = stats.completed || 0;
-                        const failed = stats.failed || 0;
+                      {Object.entries(assistantSpecificData).map(
+                        ([assistantId, stats]) => {
+                          // Now 'stats' directly contains initiated, completed, failed
+                          const queued = stats.queued || 0;
+                          const initiated = stats.initiated || 0;
+                          const completed = stats.completed || 0;
+                          const failed = stats.failed || 0;
 
-                        // Find assistant name using assistantId
-                        const assistantName =
-                          assistants.find((ass) => ass.id === assistantId)?.name || 'Unknown Assistant';
+                          // Find assistant name using assistantId
+                          const assistantName =
+                            assistants.find((ass) => ass.id === assistantId)
+                              ?.name || "Unknown Assistant";
 
-                        return (
-                          <div
-                            key={assistantId} // Use assistantId as key
-                            className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
-                          >
-                            <div className="font-medium">
-                              {assistantName}
+                          return (
+                            <div
+                              key={assistantId} // Use assistantId as key
+                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
+                            >
+                              <div className="font-medium">{assistantName}</div>
+
+                              {/* Display Initiated */}
+                              <div>
+                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {queued}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {initiated}
+                                </span>
+                              </div>
+
+                              {/* Display Done (Completed) */}
+                              <div>
+                                <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {completed}
+                                </span>
+                              </div>
+
+                              {/* Display Failed */}
+                              <div>
+                                <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                  {failed}
+                                </span>
+                              </div>
                             </div>
-
-                            {/* Display Initiated */}
-                            <div>
-                              <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {initiated}
-                              </span>
-                            </div>
-
-                            {/* Display Done (Completed) */}
-                            <div>
-                              <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {completed}
-                              </span>
-                            </div>
-
-                            {/* Display Failed */}
-                            <div>
-                              <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
-                                {failed}
-                              </span>
-                            </div>
-
-                          </div>
-                        );
-                      })}
+                          );
+                        }
+                      )}
                     </div>
                   </div>
                 )}
@@ -853,16 +862,22 @@ export default function AnalyticsPage() {
                   {calls.length > 0 ? (
                     calls.map((call) => (
                       <TableRow key={call._id}>
-                        <TableCell>{call.customer?.number ?? "Unknown"}</TableCell>
+                        <TableCell>
+                          {call.customer?.number ?? "Unknown"}
+                        </TableCell>
                         <TableCell>
                           {call.customer?.name || "Unknown"}
                         </TableCell>
                         <TableCell>
                           {call.durationSeconds !== undefined
-                            ? `${Math.floor(call.durationSeconds / 60)}m ${Math.floor(call.durationSeconds % 60)}s`
+                            ? `${Math.floor(
+                                call.durationSeconds / 60
+                              )}m ${Math.floor(call.durationSeconds % 60)}s`
                             : "N/A"}
                         </TableCell>
-                        <TableCell>{call.assistant?.name ?? "Unknown"}</TableCell>
+                        <TableCell>
+                          {call.assistant?.name ?? "Unknown"}
+                        </TableCell>
                         <TableCell>
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {

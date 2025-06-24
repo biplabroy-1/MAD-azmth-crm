@@ -1,7 +1,7 @@
 // filepath: app/api/get-analytics/route.ts
 
 import connectDB from "@/lib/connectDB";
-import User from "@/modals/User";
+import User, { IUser } from "@/modals/User";
 import CallData from "@/modals/callData.model";
 import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
@@ -12,12 +12,13 @@ export async function GET(request: NextRequest) {
     const clerkId = user?.id;
 
     if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
 
-    const userDoc = await User.findOne({ clerkId });
+    // Find the user document to get the userId
+    const userDoc = await User.findOne({ clerkId }).select('_id').lean() as IUser | null;
     if (!userDoc) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -29,53 +30,75 @@ export async function GET(request: NextRequest) {
     const startDateRaw = searchParams.get("startDate");
     const endDateRaw = searchParams.get("endDate");
 
-    const filters: any = { userId: userDoc._id };
+    // Build match conditions using the correct userId
+    const matchConditions: any = { userId: userDoc._id };
 
-    if (startDateRaw) {
-      filters["startedAt"] = {
-        ...(filters["startedAt"] || {}),
-        $gt: new Date(startDateRaw).toISOString()
-      };
+    // Fix date filtering - use Date objects and correct field names
+    if (startDateRaw || endDateRaw) {
+      matchConditions.startedAt = {};
+      if (startDateRaw) {
+        matchConditions.startedAt.$gte = new Date(startDateRaw);
+      }
+      if (endDateRaw) {
+        matchConditions.startedAt.$lte = new Date(`${endDateRaw}T23:59:59.999Z`);
+      }
     }
-
-    if (endDateRaw) {
-      filters["startedAt"] = {
-        ...(filters["startedAt"] || {}),
-        $lte: new Date(`${endDateRaw}T23:59:59.999Z`).toISOString()
-      };
-    }
-    console.log(filters);
-    
 
     if (successOnly) {
-      filters["analysis.successEvaluation"] = "true";
+      matchConditions["analysis.successEvaluation"] = "true";
     }
 
     if (excludeVoicemail) {
-      filters.endedReason = { $ne: "voicemail" };
+      matchConditions.endedReason = { $ne: "voicemail" };
     }
 
     if (!isNaN(minDuration) && minDuration > 0) {
-      filters.durationSeconds = { $gt: minDuration };
+      matchConditions.durationSeconds = { $gte: minDuration };
     }
 
-    const calls = await CallData.find(filters)
-      .sort({ startedAt: -1 })
-      .select({
-        _id:1,
-        analysis: 1,
-        startedAt: 1,
-        endedReason: 1,
-        durationSeconds: 1,
-        transcript: 1,
-        recordingUrl: 1,
-        call: 1,
-        customer: 1,
-        assistant: 1
-      })
-      .lean();
+    console.log('Match conditions:', matchConditions);
 
-    return NextResponse.json({ data: calls }, { status: 200 });
+    const result = await CallData.aggregate([
+      // Match the calls for this user with filters
+      { $match: matchConditions },
+
+      // Sort by most recent first
+      { $sort: { startedAt: -1 } },
+
+      // Group all matching calls for this user
+      {
+        $group: {
+          _id: "$userId",
+          matchingCalls: {
+            $push: {
+              _id: "$_id",
+              analysis: "$analysis",
+              startedAt: "$startedAt",
+              endedReason: "$endedReason",
+              durationSeconds: "$durationSeconds",
+              transcript: "$transcript",
+              recordingUrl: "$recordingUrl",
+              call: {
+                id: "$call.id",
+                type: "$call.type",
+                phoneNumber: "$call.phoneNumber.twilioPhoneNumber"
+              },
+              customer: "$customer",
+              assistant: {
+                id: "$assistant.id",
+                name: "$assistant.name"
+              }
+            }
+          },
+          totalCalls: { $sum: 1 }
+        }
+      }
+    ]);
+
+    return NextResponse.json({
+      data: result.length > 0 ? result[0].matchingCalls : { totalCalls: 0 },
+      count: result.length > 0 ? result[0].totalCalls : 0
+    }, { status: 200 });
 
   } catch (error) {
     console.error("❌ Error in GET /api/get-analytics:", error);
