@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/connectDB';
 import User from '@/modals/User';
-import {CallQueue} from '@/modals/callQueue';
-import {CallQueueDone} from '@/modals/callQueueDone';
+import { CallQueue } from '@/modals/callQueue';
+import { CallQueueDone } from '@/modals/callQueueDone';
 import CallData from '@/modals/callData.model';
 import { currentUser } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         };
       }
       if (status === 'initiated') assistantStats[agentId].completed = count;
-      if (status === 'failed') assistantStats[agentId].failed = count;
+      if (status === 'failed' || status === 'failed_to_initiate') assistantStats[agentId].failed = count;
       assistantStats[agentId].initiated += count;
     });
 
