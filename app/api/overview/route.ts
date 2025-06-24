@@ -11,7 +11,7 @@ import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-        const user = await currentUser();
+    const user = await currentUser();
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         };
       }
       if (status === 'initiated') assistantStats[agentId].completed = count;
-      if (status === 'failed' || status === 'failed_to_initiate') assistantStats[agentId].failed = count;
+      if (status === 'failed') assistantStats[agentId].failed = count;
       assistantStats[agentId].initiated += count;
     });
 
