@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
     if (startDateRaw || endDateRaw) {
       matchConditions.startedAt = {};
       if (startDateRaw) {
-        matchConditions.startedAt.$gte = new Date(startDateRaw);
+        matchConditions.startedAt.$gte = new Date(startDateRaw).toISOString();
       }
       if (endDateRaw) {
-        matchConditions.startedAt.$lte = new Date(`${endDateRaw}T23:59:59.999Z`);
+        matchConditions.startedAt.$lte = new Date(`${endDateRaw}T23:59:59.999Z`).toISOString();
       }
     }
 

@@ -11,12 +11,13 @@ import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // const user = await currentUser();
+    const user = await currentUser();
+    const clerkId = user?.id;
 
-    // if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     await connectDB();
-    const userDoc = await User.findOne({ clerkId: "user_2x0DhdwrWfE9PpFSljdOd3aOvYG" }, { _id: 1 });
+    const userDoc = await User.findOne({ clerkId }, { _id: 1 });
     if (!userDoc) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const userId = userDoc._id;
