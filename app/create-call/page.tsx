@@ -227,17 +227,20 @@ export default function CreateCall() {
         number: contact.number,
       }));
 
-      const response = await fetch("https://backend-queue.globaltfn.tech/api/queue-calls", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clerkId,
-          contacts: customersData,
-          assistantId: selectedQueue, // Add the selected queue ID to the request
-        }),
-      });
+      const response = await fetch(
+        "https://backend-queue.azmth.in/api/queue-calls",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clerkId,
+            contacts: customersData,
+            assistantId: selectedQueue, // Add the selected queue ID to the request
+          }),
+        }
+      );
       const data = await response.json();
       if (data.error) {
         toast({
@@ -255,7 +258,6 @@ export default function CreateCall() {
         description:
           `${data.message}` || "Calls have been initiated successfully",
       });
-
     } catch (error: any) {
       console.error("Error creating calls:", error);
       toast({

@@ -336,7 +336,7 @@ export default function AnalyticsPage() {
   };
 
   function startQueue() {
-    fetch("https://backend-queue.globaltfn.tech/api/start-queue", {
+    fetch("https://backend-queue.azmth.in/api/start-queue", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
