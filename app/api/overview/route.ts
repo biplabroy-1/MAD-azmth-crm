@@ -1,28 +1,40 @@
-// filepath: app/api/analytics/route.ts
-
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/connectDB';
-import User from '@/modals/User';
+import User, { IUser } from '@/modals/User';
 import { CallQueue } from '@/modals/callQueue';
 import { CallQueueDone } from '@/modals/callQueueDone';
 import CallData from '@/modals/callData.model';
 import { currentUser } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
+import { redis } from '@/lib/redis';
 
 export async function GET(request: NextRequest) {
   try {
     const user = await currentUser();
     const clerkId = user?.id;
 
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+
+    const cacheKey = `overview:${clerkId}`;
+
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+      return NextResponse.json(cachedData, { status: 200 });
+    }
 
     await connectDB();
-    const userDoc = await User.findOne({ clerkId }, { _id: 1 });
-    if (!userDoc) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const userDoc = await User.findOne({ clerkId }).select("_id").lean() as IUser | null;
+
+    if (!userDoc)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const userId = userDoc._id;
 
-    // Execute all database queries in parallel
     const [
       totalInQueue,
       totalInitiated,
@@ -106,7 +118,6 @@ export async function GET(request: NextRequest) {
       assistantStats[_id].queued = count;
     });
 
-    // Add completed and failed stats
     assistantGroupStats.forEach(({ _id, count }) => {
       const { agentId, status } = _id;
       if (!assistantStats[agentId]) {
@@ -122,7 +133,6 @@ export async function GET(request: NextRequest) {
       assistantStats[agentId].initiated += count;
     });
 
-    // Extract call data stats
     const callDataStats = {
       totalCallRecords: callDataAggregation[0]?.totalCalls[0]?.count || 0,
       shortCallsCount: callDataAggregation[0]?.shortCalls[0]?.count || 0,
@@ -135,22 +145,24 @@ export async function GET(request: NextRequest) {
       ? 0
       : Number(((totalInitiated - totalFailed) / totalInitiated * 100).toFixed(2));
 
-    return NextResponse.json(
-      {
-        data: {
-          queueStats: {
-            totalInQueue,
-            totalInitiated,
-            totalFailed,
-            totalCompleted,
-            successRate,
-            assistantSpecific: assistantStats
-          },
-          callDataStats
-        }
-      },
-      { status: 200 }
-    );
+    const responseData = {
+      data: {
+        queueStats: {
+          totalInQueue,
+          totalInitiated,
+          totalFailed,
+          totalCompleted,
+          successRate,
+          assistantSpecific: assistantStats
+        },
+        callDataStats
+      }
+    };
+
+    await redis.setex(cacheKey, 180, JSON.stringify(responseData));
+
+    return NextResponse.json(responseData, { status: 200 });
+
   } catch (error) {
     console.error('❌ Error fetching analytics:', error);
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 });

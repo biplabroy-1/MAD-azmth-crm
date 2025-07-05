@@ -1,11 +1,9 @@
-import connectDB from "@/lib/connectDB";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
     try {
-        await connectDB();
         const user = await currentUser();
         if (!user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

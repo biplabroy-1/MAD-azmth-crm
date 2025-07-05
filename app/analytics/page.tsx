@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
   const { userId } = useAuth();
 
   // Debounce filter changes to prevent too many API calls
-  const debouncedFilters = useDebounce(filters, 1000);
+  const debouncedFilters = useDebounce(filters, 1500);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -879,11 +879,17 @@ export default function AnalyticsPage() {
                           {call.assistant?.name ?? "Unknown"}
                         </TableCell>
                         <TableCell>
+                          {format(
+                            new Date(call.startedAt as string),
+                            "yyyy-MM-dd"
+                          )}{" "}
+                          (
                           {call.startedAt
                             ? formatDistanceToNow(new Date(call.startedAt), {
                                 addSuffix: true,
                               })
                             : "Unknown"}
+                          )
                         </TableCell>
                       </TableRow>
                     ))

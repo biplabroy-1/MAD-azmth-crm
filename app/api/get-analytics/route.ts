@@ -5,6 +5,7 @@ import User, { IUser } from "@/modals/User";
 import CallData from "@/modals/callData.model";
 import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
+import { redis } from "@/lib/redis";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,18 @@ export async function GET(request: NextRequest) {
     const clerkId = user?.id;
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Generate a cache key based on the request parameters
+    const searchParams = request.nextUrl.searchParams;
+    const cacheKey = `analytics:${clerkId}:${searchParams.toString()}`;
+
+    // Try to get data from Redis cache first
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+      return NextResponse.json(cachedData, { status: 200 });
     }
 
     await connectDB();
@@ -23,7 +35,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const searchParams = request.nextUrl.searchParams;
     const successOnly = searchParams.get("successOnly") === "true";
     const excludeVoicemail = searchParams.get("excludeVoicemail") === "true";
     const minDuration = parseInt(searchParams.get("minDuration") || "0", 10);
@@ -95,10 +106,15 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
-    return NextResponse.json({
+    const responseData = {
       data: result.length > 0 ? result[0].matchingCalls : { totalCalls: 0 },
       count: result.length > 0 ? result[0].totalCalls : 0
-    }, { status: 200 });
+    };
+
+    // Cache the result in Redis with a TTL of 3 minutes (180 seconds)
+    await redis.setex(cacheKey, 180, JSON.stringify(responseData));
+
+    return NextResponse.json(responseData, { status: 200 });
 
   } catch (error) {
     console.error("❌ Error in GET /api/get-analytics:", error);
