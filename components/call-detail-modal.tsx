@@ -38,13 +38,17 @@ export default function CallDetailModal({
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
 
-    return transcript.split("\n").map((line) => {
+    return transcript.split("\n").map((line, index) => {
       const isAI = line.startsWith("AI:");
       const isUser = line.startsWith("User:");
+      // Create a more stable key using the line content and position
+      const stableKey = `${id}-${
+        isAI ? "ai" : isUser ? "user" : "other"
+      }-${index}-${line.substring(0, 10).replace(/\s/g, "")}`;
 
       return (
         <div
-          key={`${id}-${index}`}
+          key={stableKey}
           className={`mb-3 p-3 rounded-lg ${
             isAI
               ? "bg-blue-50 border-l-4 border-blue-500"
