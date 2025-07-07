@@ -1,7 +1,7 @@
 // filepath: app/api/get-analytics/route.ts
 
 import connectDB from "@/lib/connectDB";
-import User, { IUser } from "@/modals/User";
+import User, { type IUser } from "@/modals/User";
 import CallData from "@/modals/callData.model";
 import { type NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const clerkId = user?.id;
 
     if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Generate a cache key based on the request parameters
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       matchConditions.endedReason = { $ne: "voicemail" };
     }
 
-    if (!isNaN(minDuration) && minDuration > 0) {
+    if (!Number.isNaN(minDuration) && minDuration > 0) {
       matchConditions.durationSeconds = { $gte: minDuration };
     }
 

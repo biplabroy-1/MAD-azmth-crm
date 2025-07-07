@@ -39,7 +39,7 @@ export default function CallRecords() {
 
   useEffect(() => {
     fetchCallRecords();
-  }, []);
+  });
 
   useEffect(() => {
     if (searchTerm) {
@@ -185,7 +185,7 @@ export default function CallRecords() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(6)].map((_) => (
             <Card key={id}>
               <CardHeader>
                 <Skeleton className="h-6 w-3/4" />

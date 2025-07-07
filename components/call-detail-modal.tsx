@@ -1,28 +1,28 @@
 "use client";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Phone,
   Calendar,
   Clock,
-  User,
-  MessageSquare,
-  X,
   Clock3,
   Hash,
+  MessageSquare,
+  Phone,
+  User,
+  X,
 } from "lucide-react";
+import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
-import { CallRecord } from "@/types/interfaces";
+import type { CallRecord } from "@/types/interfaces";
 
 interface CallDetailModalProps {
   call: CallRecord;
@@ -33,17 +33,18 @@ export default function CallDetailModal({
   call,
   onClose,
 }: CallDetailModalProps) {
+  const id = useId();
 
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
 
-    return transcript.split("\n").map((line, index) => {
+    return transcript.split("\n").map((line) => {
       const isAI = line.startsWith("AI:");
       const isUser = line.startsWith("User:");
 
       return (
         <div
-          key={index}
+          key={id}
           className={`mb-3 p-3 rounded-lg ${
             isAI
               ? "bg-blue-50 border-l-4 border-blue-500"
