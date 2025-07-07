@@ -1,8 +1,9 @@
 import "server-only"
 import User, { type IUser } from "@/modals/User";
+import { type Schedule } from "@/modals/Schedule";
 import connectDB from "./connectDB";
 
-export async function saveScheduleToDB(clerkId: string, schedule: any) {
+export async function saveScheduleToDB(clerkId: string, schedule: Schedule) {
     await connectDB();
 
     const existingUser = await User.findOne({ clerkId });
