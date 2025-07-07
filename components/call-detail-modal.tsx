@@ -44,7 +44,7 @@ export default function CallDetailModal({
 
       return (
         <div
-          key={id}
+          key={`${id}-${index}`}
           className={`mb-3 p-3 rounded-lg ${
             isAI
               ? "bg-blue-50 border-l-4 border-blue-500"
