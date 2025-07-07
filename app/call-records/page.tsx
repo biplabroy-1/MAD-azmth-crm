@@ -39,7 +39,7 @@ export default function CallRecords() {
 
   useEffect(() => {
     fetchCallRecords();
-  });
+  }, []);
 
   useEffect(() => {
     if (searchTerm) {
