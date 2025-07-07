@@ -1,41 +1,5 @@
 import mongoose, { Schema, type Document } from "mongoose";
-
-/** ────── Subinterfaces ────── **/
-interface TwilioConfig {
-  sid: string;
-  authToken: string;
-  phoneNumber: string;
-}
-
-export interface Contact {
-  name: string;
-  number: string;
-  assistantId: string;
-  status?: string;
-}
-
-export interface ScheduleSlot {
-  assistantId: string;
-  assistantName: string;
-  callTimeStart: string;
-  callTimeEnd: string;
-}
-
-export interface DailySchedule {
-  morning: ScheduleSlot;
-  afternoon: ScheduleSlot;
-  evening: ScheduleSlot;
-}
-
-export interface WeeklySchedule {
-  sunday: DailySchedule;
-  monday: DailySchedule;
-  tuesday: DailySchedule;
-  wednesday: DailySchedule;
-  thursday: DailySchedule;
-  friday: DailySchedule;
-  saturday: DailySchedule;
-}
+import type { DailySchedule, ScheduleSlot, TwilioConfig, WeeklySchedule } from "@/types/interfaces";
 
 /** ────── Main User Interface ────── **/
 export interface IUser extends Document {
@@ -60,19 +24,21 @@ export interface IUser extends Document {
 
 const ScheduleSlotSchema = new Schema<ScheduleSlot>(
   {
-    assistantName: { type: String, required: true },
-    assistantId: { type: String, required: true },
-    callTimeStart: { type: String, required: true },
-    callTimeEnd: { type: String, required: true }
+    assistantName: { type: String },
+    assistantId: { type: String },
+    callTimeStart: { type: String },
+    callTimeEnd: { type: String },
+    callTimeEndET: { type: String },
+    callTimeStartET: { type: String }
   },
   { _id: false }
 );
 
 const DailyScheduleSchema = new Schema<DailySchedule>(
   {
-    morning: { type: ScheduleSlotSchema, required: true },
-    afternoon: { type: ScheduleSlotSchema, required: true },
-    evening: { type: ScheduleSlotSchema, required: true }
+    morning: { type: ScheduleSlotSchema },
+    afternoon: { type: ScheduleSlotSchema },
+    evening: { type: ScheduleSlotSchema }
   },
   { _id: false }
 );
@@ -108,7 +74,7 @@ const UserSchema = new Schema<IUser>(
     lastName: String,
     profileImageUrl: String,
 
-    twilioConfig: { type: TwilioConfigSchema, required: true },
+    twilioConfig: { type: TwilioConfigSchema },
     content: { type: String },
 
     weeklySchedule: { type: WeeklyScheduleSchema }

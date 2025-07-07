@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import dayjs from "dayjs"
+import moment from "moment-timezone";
+import type { ScheduleSlot } from "@/types/interfaces";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -64,7 +66,7 @@ export const getCurrentTimeSlot = (weeklySchedule: any, dayOfWeek: string): any 
   if (!slots) return null;
 
   for (const [slotName, slotData] of Object.entries(slots)) {
-    const { callTimeStart, callTimeEnd } = slotData as any;
+    const { callTimeStart, callTimeEnd } = slotData as ScheduleSlot;
 
     if (callTimeStart && callTimeEnd && currentTime >= callTimeStart && currentTime <= callTimeEnd) {
       return { slotName, slotData };
@@ -121,4 +123,43 @@ export function isEasternDaylightTime(date: Date): boolean {
   }
 
   return false;
+}
+
+export function convertToUTC(time: string, day: string): string {
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const [hours, minutes] = time.split(":").map(Number);
+  const now = new Date();
+  const dayIndex = days.indexOf(day);
+  const delta = (dayIndex - now.getDay() + 7) % 7;
+  const targetDate = new Date(now);
+  targetDate.setDate(now.getDate() + delta);
+  targetDate.setHours(hours, minutes, 0, 0);
+  const isDST = isEasternDaylightTime(targetDate);
+  const utcHours = hours + (isDST ? 4 : 5);
+  return `${String(utcHours % 24).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+export async function getAssistents() {
+  const response = await fetch("https://api.vapi.ai/assistant", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    return await response.json();
+  }
+
+  return await response.json();
+}
+
+export function convertETTimeToUTC(time: string): string {
+  const today = moment().format("YYYY-MM-DD"); // current date
+  const etTime = moment.tz(`${today} ${time}`, "YYYY-MM-DD HH:mm", "America/New_York");
+
+  if (!etTime.isValid()) return "";
+
+  return etTime.utc().format("HH:mm");
 }
