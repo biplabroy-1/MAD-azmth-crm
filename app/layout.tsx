@@ -42,6 +42,9 @@ export default function RootLayout({
             <Analytics />
             <nav className="flex gap-6">
               <SignedIn>
+                <Link className="hover:text-blue-500" href="/create-call">
+                  Create calls
+                </Link>
                 <Link className="hover:text-blue-500" href="/schedule">
                   Schedule Calls
                 </Link>
