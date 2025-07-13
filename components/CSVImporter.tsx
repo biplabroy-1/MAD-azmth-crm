@@ -269,7 +269,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
     toast,
   ]);
 
-  // Virtualized row renderer for react-window
+  // Virtualized row renderer for react-window style
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const row = filteredData[index];
     return (
