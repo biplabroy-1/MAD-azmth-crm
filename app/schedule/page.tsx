@@ -15,6 +15,11 @@ export default async function SchedulePage() {
   const schedule = await fetchUserSchedule(userId);
   const today = new Date();
   const selectedDate = today.toISOString().split("T")[0];
+
+  if (!schedule) {
+    <div>Please log in.</div>;
+  }
+
   return (
     <main className="p-4">
       <div className="flex justify-between">

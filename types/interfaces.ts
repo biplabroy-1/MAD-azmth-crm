@@ -131,11 +131,5 @@ export interface Assistant {
   name: string;
 }
 
-export interface TimeSlot {
-  id: string;
-  start: string;
-  end: string;
-}
-
 
 export type Schedule = Record<string, Record<string, ScheduleSlot>>;

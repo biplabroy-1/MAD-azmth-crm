@@ -8,21 +8,22 @@ import {
   MessageSquare,
   Phone,
   User,
-  X,
 } from "lucide-react";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
 import type { CallRecord } from "@/types/interfaces";
+import { saveAs } from "file-saver";
+import { toSvg } from "html-to-image";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CallDetailModalProps {
   call: CallRecord;
@@ -34,6 +35,34 @@ export default function CallDetailModal({
   onClose,
 }: CallDetailModalProps) {
   const id = useId();
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = async () => {
+    if (!modalRef.current) return;
+
+    // Ensure full content is visible (optional, but helpful)
+    const originalMaxHeight = modalRef.current.style.maxHeight;
+    const originalOverflow = modalRef.current.style.overflow;
+    modalRef.current.style.maxHeight = "none";
+    modalRef.current.style.overflow = "visible";
+
+    try {
+      const dataUrl = await toSvg(modalRef.current, {
+        backgroundColor: "#ffffff",
+        canvasHeight: Number(originalMaxHeight),
+        cacheBust: true,
+      });
+
+      saveAs(dataUrl, `call-${call.customer?.number}.svg`);
+    } catch (err) {
+      console.error("Snapshot failed:", err);
+    }
+
+    // Restore style
+    modalRef.current.style.maxHeight = originalMaxHeight;
+    modalRef.current.style.overflow = originalOverflow;
+  };
 
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
@@ -112,11 +141,21 @@ export default function CallDetailModal({
             >
               {getStatusBadge(call.status, call.endedReason).text}
             </Badge>
+
+            <Button
+              onClick={handleDownload}
+              className="flex items-center gap-2 w-full md:w-auto"
+            >
+              Download as SVG
+            </Button>
           </div>
         </DialogHeader>
 
         {/* Using a fixed height container with overflow-auto instead of ScrollArea for more reliable scrolling */}
-        <div className="flex-1 overflow-auto h-[calc(90vh-140px)]">
+        <ScrollArea
+          ref={modalRef}
+          className="flex-1 modal-scrollable overflow-auto h-[calc(90vh-140px)]"
+        >
           <div className="p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
               <div className="space-y-4">
@@ -221,18 +260,7 @@ export default function CallDetailModal({
               </div>
             )}
           </div>
-        </div>
-
-        <DialogFooter className="border-t p-4 mt-auto">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="flex items-center gap-2 w-full md:w-auto"
-          >
-            <X className="h-4 w-4" />
-            Close Details
-          </Button>
-        </DialogFooter>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

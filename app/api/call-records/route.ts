@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const response = await fetch('https://api.vapi.ai/call?limit=500', {
+    const response = await fetch('https://api.vapi.ai/call?limit=1000', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
