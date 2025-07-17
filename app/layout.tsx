@@ -8,10 +8,10 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
-import Link from "next/link";
 import { Toaster } from "@/components/ui/toaster";
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
+import NavBar from "@/components/NavBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,27 +35,11 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning
         >
-          {" "}
           <header className="flex justify-between items-center p-4 h-16">
             <Toaster />
             <SpeedInsights />
             <Analytics />
-            <nav className="flex gap-6">
-              <SignedIn>
-                <Link className="hover:text-blue-500" href="/create-call">
-                  Create calls
-                </Link>
-                <Link className="hover:text-blue-500" href="/schedule">
-                  Schedule Calls
-                </Link>
-                <Link className="hover:text-blue-500" href="/analytics">
-                  Analytics
-                </Link>
-                <Link className="hover:text-blue-500" href="/call-records">
-                  Call Records
-                </Link>
-              </SignedIn>
-            </nav>
+            <NavBar /> {/* ✅ Use the NavBar here */}
             <div className="flex items-center gap-4">
               <SignedOut>
                 <SignInButton
