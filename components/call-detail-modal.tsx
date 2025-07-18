@@ -64,6 +64,19 @@ export default function CallDetailModal({
     modalRef.current.style.overflow = originalOverflow;
   };
 
+  const handleDownloadAudio = async () => {
+    const audioUrl = call.artifact?.recordingUrl;
+    if (!audioUrl) return;
+
+    try {
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      saveAs(blob, `call-${call.customer?.number}.mp3`);
+    } catch (err) {
+      console.error("Audio download failed:", err);
+    }
+  };
+
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
 
@@ -147,6 +160,12 @@ export default function CallDetailModal({
               className="flex items-center gap-2 w-full md:w-auto"
             >
               Download as SVG
+            </Button>
+            <Button
+              onClick={handleDownloadAudio}
+              className="flex items-center gap-2 w-full md:w-auto"
+            >
+              Download Audio
             </Button>
           </div>
         </DialogHeader>

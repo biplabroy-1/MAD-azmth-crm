@@ -139,22 +139,6 @@ export function convertToUTC(time: string, day: string): string {
   return `${String(utcHours % 24).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-export async function getAssistents() {
-  const response = await fetch("https://api.vapi.ai/assistant", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    return await response.json();
-  }
-
-  return await response.json();
-}
-
 export function convertETTimeToUTC(time: string): string {
   const today = moment().format("YYYY-MM-DD"); // current date
   const etTime = moment.tz(`${today} ${time}`, "YYYY-MM-DD HH:mm", "America/New_York");
