@@ -4,7 +4,6 @@ import { CallRecordsLoading } from "./call-records-loading";
 import { getAllCalls } from "@/lib/vapiHelper";
 
 export default async function CallRecordsPage() {
-
   const callRecords = await getAllCalls(1000);
   if (!callRecords) return null;
   return (
