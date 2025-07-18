@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import ScheduleForm from "@/components/scheduleForm";
-import { getAssistents } from "@/lib/utils";
+import { getAssistents } from "@/lib/vapiHelper";
 import { fetchUserSchedule } from "@/lib/dataAccessLayer";
 
 export default async function SchedulePage() {

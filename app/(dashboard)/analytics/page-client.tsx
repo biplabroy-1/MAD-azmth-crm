@@ -37,8 +37,10 @@ import { toast } from "@/hooks/use-toast";
 import type {
 	AnalyticsCallRecord,
 	AnalyticsData,
+	Assistant,
 	OverviewData,
 } from "@/types/interfaces";
+import { useDebounce } from "@/components/utils";
 
 // Register Chart.js components
 ChartJS.register(
@@ -51,7 +53,11 @@ ChartJS.register(
 	ArcElement,
 );
 
-export default function AnalyticsPage() {
+export default function AnalyticsPage({
+	assistants,
+}: {
+	assistants: Array<Assistant>;
+}) {
 	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
 		null,
 	);
@@ -59,7 +65,6 @@ export default function AnalyticsPage() {
 		null,
 	);
 	const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
-	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState("detailed");
 	const [filters, setFilters] = useState({
@@ -69,9 +74,6 @@ export default function AnalyticsPage() {
 		startDate: "",
 		endDate: format(new Date(), "yyyy-MM-dd"),
 	});
-	const [assistants, setAssistants] = useState<
-		Array<{ id: string; name: string }>
-	>([]);
 	const { userId } = useAuth();
 
 	// Debounce filter changes to prevent too many API calls
@@ -80,8 +82,6 @@ export default function AnalyticsPage() {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				setLoading(true);
-
 				// Build query parameters
 				const queryParams = new URLSearchParams({
 					successOnly: debouncedFilters.successOnly.toString(),
@@ -118,65 +118,13 @@ export default function AnalyticsPage() {
 					err instanceof Error ? err.message : "An unknown error occurred",
 				);
 				console.error("Error fetching data:", err);
-			} finally {
-				setLoading(false);
 			}
 		};
 
 		fetchData();
 	}, [debouncedFilters]); // Use debounced filters instead of raw filters
 
-	useEffect(() => {
-		const fetchAssistants = async () => {
-			try {
-				const response = await fetch("/api/get-assistants");
-				if (!response.ok) {
-					throw new Error("Failed to fetch assistants");
-				}
 
-				const data = await response.json();
-				if (data.success && Array.isArray(data.assistants)) {
-					// Format assistants as queue options
-					const formattedAssistants = data.assistants.map(
-						(assistant: { id: string; name: string }) => ({
-							id: assistant.id,
-							name: assistant.name || `Assistant ${assistant.id.slice(0, 6)}`,
-						}),
-					);
-
-					setAssistants(formattedAssistants);
-				} else {
-					console.error("Invalid assistants data format", data);
-				}
-			} catch (error) {
-				console.error("Error fetching assistants:", error);
-				toast({
-					title: "Error",
-					description: "Failed to load assistants. Please try again later.",
-					variant: "destructive",
-				});
-			}
-		};
-
-		fetchAssistants();
-	}, []);
-
-	// Add useDebounce hook at the top of the file, after imports
-	function useDebounce<T>(value: T, delay: number): T {
-		const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-		useEffect(() => {
-			const timer = setTimeout(() => {
-				setDebouncedValue(value);
-			}, delay);
-
-			return () => {
-				clearTimeout(timer);
-			};
-		}, [value, delay]);
-
-		return debouncedValue;
-	}
 
 	// Prepare chart data
 	const prepareChartData = () => {
@@ -321,17 +269,6 @@ export default function AnalyticsPage() {
 	const closeModal = () => {
 		setSelectedCall(null);
 	};
-
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<h2 className="text-2xl font-bold mb-4">Loading Analytics...</h2>
-					<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto" />
-				</div>
-			</div>
-		);
-	}
 
 	if (error) {
 		return (

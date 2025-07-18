@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +10,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import {
   Calendar,
   Clock,
@@ -22,70 +21,39 @@ import {
 import Link from "next/link";
 import CallDetailModal from "@/components/call-detail-modal";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
 import type { CallRecord } from "@/types/interfaces";
 import xlsx from "json-as-xlsx";
+import { useDebounce } from "@/components/utils";
 
-export default function CallRecords() {
-  const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<CallRecord[]>([]);
+interface CallRecordsContentProps {
+  initialCallRecords: CallRecord[];
+}
+
+export function CallRecordsContent({
+  initialCallRecords,
+}: CallRecordsContentProps) {
+  const [filteredRecords, setFilteredRecords] =
+    useState<CallRecord[]>(initialCallRecords);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast } = useToast();
-  const id = useId();
-
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   useEffect(() => {
-    fetchCallRecords();
-  }, []);
-
-  useEffect(() => {
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       setFilteredRecords(
-        callRecords.filter(
+        initialCallRecords.filter(
           (record) =>
-            record.customer?.number?.includes(searchTerm) ||
+            record.customer?.number?.includes(debouncedSearchTerm) ||
             record.customer?.name
               ?.toLowerCase()
-              .includes(searchTerm.toLowerCase()) ||
-            record.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
+              .includes(debouncedSearchTerm.toLowerCase()) ||
+            record.phoneNumber?.twilioPhoneNumber?.includes(debouncedSearchTerm)
         )
       );
     } else {
-      setFilteredRecords(callRecords);
+      setFilteredRecords(initialCallRecords);
     }
-  }, [searchTerm, callRecords]);
-
-  const fetchCallRecords = async () => {
-    const loadingState =
-      callRecords.length > 0 ? setIsRefreshing : setIsLoading;
-    loadingState(true);
-
-    try {
-      const response = await fetch("/api/call-records", {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch call records");
-      }
-
-      const data = await response.json();
-      setCallRecords(data);
-      setFilteredRecords(data);
-    } catch (error) {
-      console.error("Error fetching call records:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch call records. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      loadingState(false);
-    }
-  };
+  }, [debouncedSearchTerm, initialCallRecords]);
 
   const exportAsCSV = () => {
     const data = [
@@ -107,9 +75,9 @@ export default function CallRecords() {
           number: record.customer?.number || "N/A",
           twilioPhoneNumber: record.phoneNumber?.twilioPhoneNumber || "N/A",
           startedAt: formatDate(record.startedAt || record.createdAt),
-          endedAt: formatDate(record.endedAt),
-          duration: formatDuration(record.startedAt, record.endedAt),
-          summary: record.summary || "",
+          endedAt: formatDate(record.endedAt || ""),
+          duration: formatDuration(record.startedAt || "", record.endedAt || ""),
+          summary: record.analysis?.summary || "",
         })),
       },
     ];
@@ -123,7 +91,6 @@ export default function CallRecords() {
     };
 
     xlsx(data, settings);
-    console.log(filteredRecords);
   };
 
   const handleCardClick = (call: CallRecord) => {
@@ -135,7 +102,7 @@ export default function CallRecords() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -166,11 +133,9 @@ export default function CallRecords() {
           </div>
           <Button
             variant="outline"
-            onClick={fetchCallRecords}
-            disabled={isLoading || isRefreshing}
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+              className={`h-4 w-4 mr-2`}
             />
             Refresh
           </Button>
@@ -183,33 +148,7 @@ export default function CallRecords() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <Skeleton className="h-4 w-full mt-2" />
-                <Skeleton className="h-4 w-2/3 mt-2" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredRecords.length === 0 ? (
+      {filteredRecords.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
           <Search className="h-10 w-10 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No call records found</h3>
@@ -218,10 +157,6 @@ export default function CallRecords() {
               ? "No records match your search criteria. Try a different search term."
               : "No call records available. Initiate calls to see records here."}
           </p>
-          <Button onClick={fetchCallRecords}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh records
-          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -247,10 +182,10 @@ export default function CallRecords() {
                   <Badge
                     variant="outline"
                     className={
-                      getStatusBadge(call.status, call.endedReason).color
+                      getStatusBadge(call?.status || "", call?.endedReason || "").color
                     }
                   >
-                    {getStatusBadge(call.status, call.endedReason).text}
+                    {getStatusBadge(call?.status || "", call?.endedReason || "").text}
                   </Badge>
                 </div>
               </CardHeader>
@@ -265,7 +200,7 @@ export default function CallRecords() {
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm">
-                      Duration: {formatDuration(call.startedAt, call.endedAt)}
+                      Duration: {formatDuration(call.startedAt || "", call.endedAt || "")}
                     </span>
                   </div>
                   {call.endedReason === "customer-did-not-answer" && (
@@ -274,10 +209,10 @@ export default function CallRecords() {
                       <span className="text-sm">Customer did not answer</span>
                     </div>
                   )}
-                  {call.summary && (
+                  {call.analysis?.summary && (
                     <div className="pt-2 border-t mt-2">
                       <p className="text-sm text-muted-foreground line-clamp-2">
-                        {call.summary}
+                        {call.analysis?.summary}
                       </p>
                     </div>
                   )}
@@ -291,6 +226,6 @@ export default function CallRecords() {
       {selectedCall && (
         <CallDetailModal call={selectedCall} onClose={closeModal} />
       )}
-    </div>
+    </>
   );
 }
