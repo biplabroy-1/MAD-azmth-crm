@@ -25,11 +25,13 @@ export default function NavBar() {
     { href: "/call-records", label: "Call Records" },
   ];
 
+  const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
+
   return (
     <nav className="flex w-screen items-center justify-between px-6 py-3 shadow-sm border-b">
       {/* Left: Logo */}
       <div className="flex items-center gap-2">
-        <img src="/azmth.svg" alt="Azmth Logo" className="h-8 w-auto" />
+        <img src={logoSrc} alt="Azmth Logo" className="h-8 w-auto" />
       </div>
 
       {/* Center: Nav Links */}
