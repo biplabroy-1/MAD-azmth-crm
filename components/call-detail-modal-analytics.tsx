@@ -8,25 +8,24 @@ import {
   MessageSquare,
   Phone,
   User,
+  X,
 } from "lucide-react";
-import { useId, useRef } from "react";
+import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
-import type { CallRecord } from "@/types/interfaces";
-import { saveAs } from "file-saver";
-import { toSvg } from "html-to-image";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDate } from "@/lib/utils";
+import type { AnalyticsCallRecord } from "@/types/interfaces";
 
 interface CallDetailModalProps {
-  call: CallRecord;
+  call: AnalyticsCallRecord;
   onClose: () => void;
 }
 
@@ -35,59 +34,15 @@ export default function CallDetailModal({
   onClose,
 }: CallDetailModalProps) {
   const id = useId();
-
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const handleDownload = async () => {
-    if (!modalRef.current) return;
-
-    // Ensure full content is visible (optional, but helpful)
-    const originalMaxHeight = modalRef.current.style.maxHeight;
-    const originalOverflow = modalRef.current.style.overflow;
-    modalRef.current.style.maxHeight = "none";
-    modalRef.current.style.overflow = "visible";
-
-    try {
-      const dataUrl = await toSvg(modalRef.current, {
-        backgroundColor: "#ffffff",
-        canvasHeight: Number(originalMaxHeight),
-        cacheBust: true,
-      });
-
-      saveAs(dataUrl, `call-${call.customer?.number}.svg`);
-    } catch (err) {
-      console.error("Snapshot failed:", err);
-    }
-
-    // Restore style
-    modalRef.current.style.maxHeight = originalMaxHeight;
-    modalRef.current.style.overflow = originalOverflow;
-  };
-
-  const handleDownloadAudio = async () => {
-    const audioUrl = call.artifact?.recordingUrl;
-    if (!audioUrl) return;
-
-    try {
-      const response = await fetch(audioUrl);
-      const blob = await response.blob();
-      saveAs(blob, `call-${call.customer?.number}.mp3`);
-    } catch (err) {
-      console.error("Audio download failed:", err);
-    }
-  };
-
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
 
     return transcript.split("\n").map((line, index) => {
       const isAI = line.startsWith("AI:");
       const isUser = line.startsWith("User:");
-      // Create a more stable key using the line content and position
       const stableKey = `${id}-${
         isAI ? "ai" : isUser ? "user" : "other"
       }-${index}-${line.substring(0, 10).replace(/\s/g, "")}`;
-
       return (
         <div
           key={stableKey}
@@ -145,36 +100,15 @@ export default function CallDetailModal({
               </DialogTitle>
               <DialogDescription className="flex items-center gap-2 mt-1 text-xs md:text-sm overflow-hidden text-ellipsis">
                 <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-mono truncate">{call.id}</span>
+                <span className="font-mono truncate">{call._id}</span>
               </DialogDescription>
             </div>
-            <Badge
-              variant="outline"
-              className={getStatusBadge(call.status || "", call.endedReason).color}
-            >
-              {getStatusBadge(call.status || "", call.endedReason).text}
-            </Badge>
-
-            <Button
-              onClick={handleDownload}
-              className="flex items-center gap-2 w-full md:w-auto"
-            >
-              Download as SVG
-            </Button>
-            <Button
-              onClick={handleDownloadAudio}
-              className="flex items-center gap-2 w-full md:w-auto"
-            >
-              Download Audio
-            </Button>
+            <Badge variant="outline">{call.endedReason}</Badge>
           </div>
         </DialogHeader>
 
         {/* Using a fixed height container with overflow-auto instead of ScrollArea for more reliable scrolling */}
-        <ScrollArea
-          ref={modalRef}
-          className="flex-1 modal-scrollable overflow-auto h-[calc(90vh-140px)]"
-        >
+        <div className="flex-1 overflow-auto h-[calc(90vh-140px)]">
           <div className="p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
               <div className="space-y-4">
@@ -225,40 +159,25 @@ export default function CallDetailModal({
                         Started At
                       </p>
                       <p className="font-medium">
-                        {formatDate(call.startedAt || "")}
+                        {formatDate(call.startedAt as string)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Ended At</p>
-                      <p className="font-medium">
-                        {formatDate(call.endedAt || "")}
-                      </p>
-                    </div>
-                  </div>
+
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">
-                        {formatDuration(
-                          call.startedAt || "",
-                          call.endedAt || ""
-                        )}
-                      </p>
+                      <p className="font-medium">{call.durationSeconds}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {call?.analysis?.summary && (
+            {call.analysis?.summary && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
@@ -266,13 +185,13 @@ export default function CallDetailModal({
                 </h3>
                 <div className="p-4 bg-muted/50 rounded-lg border">
                   <p className="text-sm whitespace-pre-line">
-                    {call?.analysis?.summary}
+                    {call.analysis?.summary}
                   </p>
                 </div>
               </div>
             )}
 
-            {call.artifact?.transcript && (
+            {call.transcript && (
               <div>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
@@ -280,13 +199,24 @@ export default function CallDetailModal({
                 </h3>
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="space-y-3">
-                    {formatTranscript(call.artifact?.transcript)}
+                    {formatTranscript(call.transcript)}
                   </div>
                 </div>
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
+
+        <DialogFooter className="border-t p-4 mt-auto">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex items-center gap-2 w-full md:w-auto"
+          >
+            <X className="h-4 w-4" />
+            Close Details
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
