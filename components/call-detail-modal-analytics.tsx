@@ -48,9 +48,9 @@ export default function CallDetailModal({
           key={stableKey}
           className={`mb-3 p-3 rounded-lg ${
             isAI
-              ? "bg-blue-50 border-l-4 border-blue-500"
+              ? "bg-muted border-l-4 border-primary"
               : isUser
-              ? "bg-gray-50 border-l-4 border-gray-400"
+              ? "bg-muted/50 border-l-4 border-muted-foreground"
               : ""
           }`}
         >
@@ -58,9 +58,9 @@ export default function CallDetailModal({
             <div
               className={`p-1.5 rounded-full mt-0.5 ${
                 isAI
-                  ? "bg-blue-100 text-blue-600"
+                  ? "bg-primary/10 text-primary"
                   : isUser
-                  ? "bg-gray-100 text-gray-600"
+                  ? "bg-muted text-muted-foreground"
                   : ""
               }`}
             >
@@ -73,7 +73,7 @@ export default function CallDetailModal({
             <div className="flex-1 break-words">
               <p
                 className={`text-sm font-medium mb-1 ${
-                  isAI ? "text-blue-800" : isUser ? "text-gray-800" : ""
+                  isAI ? "text-primary" : isUser ? "text-foreground" : ""
                 }`}
               >
                 {isAI ? "Assistant" : isUser ? "Customer" : ""}
@@ -118,7 +118,7 @@ export default function CallDetailModal({
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                       <User className="h-4 w-4" />
                     </div>
                     <div>
@@ -129,7 +129,7 @@ export default function CallDetailModal({
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                       <Phone className="h-4 w-4" />
                     </div>
                     <div>
@@ -151,7 +151,7 @@ export default function CallDetailModal({
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                     </div>
                     <div>
@@ -165,7 +165,7 @@ export default function CallDetailModal({
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div>
@@ -183,7 +183,7 @@ export default function CallDetailModal({
                   <MessageSquare className="h-5 w-5 text-primary" />
                   Call Summary
                 </h3>
-                <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="p-4 bg-muted/50 rounded-lg border">
                   <p className="text-sm whitespace-pre-line">
                     {call.analysis?.summary}
                   </p>
@@ -197,7 +197,7 @@ export default function CallDetailModal({
                   <MessageSquare className="h-5 w-5 text-primary" />
                   Full Transcript
                 </h3>
-                <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="space-y-3">
                     {formatTranscript(call.transcript)}
                   </div>

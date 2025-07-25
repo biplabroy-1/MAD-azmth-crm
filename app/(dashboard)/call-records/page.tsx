@@ -1,15 +1,12 @@
 import { Suspense } from "react";
-import { CallRecordsContent } from "./call-records-content";
 import { CallRecordsLoading } from "./call-records-loading";
-import { getAllCalls } from "@/lib/vapiHelper";
+import { CallRecordsLoader } from "./call-records-loader"; // server component below
 
-export default async function CallRecordsPage() {
-  const callRecords = await getAllCalls(1000);
-  if (!callRecords) return null;
+export default function CallRecordsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Suspense fallback={<CallRecordsLoading />}>
-        <CallRecordsContent initialCallRecords={callRecords} />
+        <CallRecordsLoader />
       </Suspense>
     </div>
   );

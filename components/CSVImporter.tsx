@@ -447,7 +447,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
               key={`header-${index}-${id}`}
               className={`whitespace-nowrap min-w-[120px] ${
                 header === nameColumn || header === numberColumn
-                  ? "bg-primary/10 text-primary sticky left-0 z-20"
+                  ? "bg-muted text-foreground sticky left-0 z-20"
                   : ""
               }`}
             >
@@ -463,15 +463,15 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
   return (
     <>
       {/* CSV Uploader UI */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-primary/5 rounded-lg border border-primary/10">
-        <div className="shrink-0 p-3 bg-primary/10 rounded-full">
+      <div className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-muted/50 rounded-lg border border-border">
+        <div className="shrink-0 p-3 bg-muted rounded-full">
           <FileText className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1 text-center sm:text-left">
-          <h3 className="font-medium text-gray-900">
+          <h3 className="font-medium text-foreground">
             Import Contacts from CSV
           </h3>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Upload a CSV file to import multiple contacts at once. Make sure
             phone numbers include country codes (e.g., +1).
           </p>
@@ -522,14 +522,14 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
             </Alert> */}
 
             {filteredData.length > 1000 && (
-              <Alert className="bg-blue-50 border-blue-200 py-3 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <Alert className="bg-muted border-border py-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <AlertTitle className="text-blue-600 text-sm font-medium">
+                  <AlertTitle className="text-foreground text-sm font-medium">
                     Large Dataset Detected (
                     {filteredData.length.toLocaleString()} rows)
                   </AlertTitle>
-                  <AlertDescription className="text-blue-700 text-xs">
+                  <AlertDescription className="text-muted-foreground text-xs">
                     For better performance with this large dataset:
                     <ul className="list-disc pl-4 mt-1 space-y-1">
                       <li>Use a smaller number of items per page (100-500)</li>
@@ -544,16 +544,16 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
               </Alert>
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="bg-muted/50 border border-border rounded-md p-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <div className="flex-1">
                   <Label
                     htmlFor="default-country-code"
-                    className="text-sm font-medium text-blue-700 mb-1 block"
+                    className="text-sm font-medium text-foreground mb-1 block"
                   >
                     Default Country Code
                   </Label>
-                  <div className="text-xs text-blue-600 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     Set a default country code to apply to all phone numbers
                     missing one
                   </div>
@@ -569,7 +569,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 bg-blue-100 hover:bg-blue-200 border-blue-200 text-blue-700"
+                    className="h-8"
                     onClick={applyCountryCodeToAll}
                   >
                     Apply to All
@@ -656,7 +656,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     Showing page {currentPage} of {totalPages} (
                     {filteredData.length > 0
                       ? (currentPage - 1) * itemsPerPage + 1
@@ -681,7 +681,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                             >
                               <div className="flex flex-col items-center justify-center">
                                 <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mb-2" />
-                                <span className="text-sm text-gray-600">
+                                <span className="text-sm text-muted-foreground">
                                   Loading data...
                                 </span>
                               </div>
@@ -703,9 +703,9 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                                     key={`cell-${rowIndex}-${colIndex}-${id}`}
                                     className={`whitespace-nowrap min-w-[120px] ${
                                       hasError
-                                        ? "bg-red-50 text-red-600"
+                                        ? "bg-destructive/10 text-destructive"
                                         : isSpecialColumn
-                                        ? "bg-primary/5"
+                                        ? "bg-muted/30"
                                         : ""
                                     }`}
                                   >
@@ -718,7 +718,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                                         String(row[header] || "")
                                       ) && (
                                         <div className="flex flex-col gap-1 mt-1">
-                                          <span className="text-xs text-red-500">
+                                          <span className="text-xs text-destructive">
                                             Missing country code
                                           </span>
                                           <div className="flex items-center gap-1 mt-1">
@@ -768,7 +768,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
                   </div>
                 </div>
                 <div className="flex justify-between items-center mt-2">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Total rows: {filteredData.length}
                   </p>
 
@@ -822,10 +822,7 @@ export default function CSVImporter({ onImportContacts }: CSVImporterProps) {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={importContacts}
-                className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 min-w-[150px]"
-              >
+              <Button onClick={importContacts} className="min-w-[150px]">
                 Import Contacts
               </Button>
             </div>
