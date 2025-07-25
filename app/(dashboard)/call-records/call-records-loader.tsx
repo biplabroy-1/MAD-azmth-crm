@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllCalls } from "@/lib/vapiHelper";
 import { CallRecordsContent } from "./call-records-content";
 
