@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { CallRecordsLoading } from "./call-records-loading";
 import { CallRecordsLoader } from "./call-records-loader"; // server component below
 
+export const dynamic = "force-dynamic";
+
 export default function CallRecordsPage() {
   return (
     <div className="container mx-auto px-4 py-8">

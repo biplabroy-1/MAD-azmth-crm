@@ -371,58 +371,53 @@ export default function AnalyticsPage({
                 {overview?.queueStats.assistantSpecific && (
                   <div className="mt-4">
                     <div className="max-h-[300px] overflow-auto">
-                      {/* Updated Grid Columns: Removed 'In Queue' column */}
-                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 pb-2 mb-2 text-sm font-medium text-gray-500">
+                      {/* Header row */}
+                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 dark:border-gray-700 pb-2 mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
                         <div>Name</div>
                         <div className="text-center">In Queue</div>
-                        <div className="text-center">Initiated</div>{" "}
-                        {/* Moved initiated */}
+                        <div className="text-center">Initiated</div>
                         <div className="text-center">Done</div>
                         <div className="text-center">Failed</div>
                       </div>
 
                       {Object.entries(assistantSpecificData).map(
                         ([assistantId, stats]) => {
-                          // Now 'stats' directly contains initiated, completed, failed
                           const queued = stats.queued || 0;
                           const initiated = stats.initiated || 0;
                           const completed = stats.completed || 0;
                           const failed = stats.failed || 0;
 
-                          // Find assistant name using assistantId
                           const assistantName =
                             assistants.find((ass) => ass.id === assistantId)
                               ?.name || "Unknown Assistant";
 
                           return (
                             <div
-                              key={assistantId} // Use assistantId as key
-                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 border-b border-gray-100 py-2"
+                              key={assistantId}
+                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 dark:text-gray-200 border-b border-gray-100 dark:border-gray-800 py-2"
                             >
                               <div className="font-medium">{assistantName}</div>
 
-                              {/* Display Initiated */}
                               <div>
-                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                <span className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
                                   {queued}
                                 </span>
                               </div>
+
                               <div>
-                                <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                <span className="inline-block bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
                                   {initiated}
                                 </span>
                               </div>
 
-                              {/* Display Done (Completed) */}
                               <div>
-                                <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                <span className="inline-block bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
                                   {completed}
                                 </span>
                               </div>
 
-                              {/* Display Failed */}
                               <div>
-                                <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                <span className="inline-block bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 px-3 py-1 rounded-full text-xs font-semibold">
                                   {failed}
                                 </span>
                               </div>
@@ -692,7 +687,7 @@ export default function AnalyticsPage({
                 <CardTitle>Successful Calls</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{calls.length}</div>
+                <div className="text-4xl font-bold">{calls.length || 0}</div>
               </CardContent>
             </Card>
 
@@ -756,6 +751,7 @@ export default function AnalyticsPage({
                   {calls.length > 0 ? (
                     calls.map((call) => (
                       <TableRow
+                        className="cursor-pointer"
                         key={call._id}
                         onClick={() => handleCardClick(call)}
                       >

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Calendar,
   Clock,
@@ -23,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/utils";
 import type { AnalyticsCallRecord } from "@/types/interfaces";
+import { saveAs } from "file-saver";
 
 interface CallDetailModalProps {
   call: AnalyticsCallRecord;
@@ -34,6 +33,20 @@ export default function CallDetailModal({
   onClose,
 }: CallDetailModalProps) {
   const id = useId();
+
+  const handleDownloadAudio = async () => {
+    const audioUrl = call.recordingUrl;
+    if (!audioUrl) return;
+
+    try {
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      saveAs(blob, `call-${call.customer?.number}.mp3`);
+    } catch (err) {
+      console.error("Audio download failed:", err);
+    }
+  };
+
   const formatTranscript = (transcript: string) => {
     if (!transcript) return null;
 
@@ -104,6 +117,13 @@ export default function CallDetailModal({
               </DialogDescription>
             </div>
             <Badge variant="outline">{call.endedReason}</Badge>
+            <Button
+              onClick={handleDownloadAudio}
+              disabled={!call.recordingUrl}
+              className="flex items-center gap-2 w-full md:w-auto"
+            >
+              Download Audio
+            </Button>
           </div>
         </DialogHeader>
 

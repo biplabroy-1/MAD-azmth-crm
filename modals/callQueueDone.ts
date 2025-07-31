@@ -13,7 +13,7 @@ const CallQueueDoneSchema = new mongoose.Schema({
 });
 
 CallQueueDoneSchema.index({ userId: 1 });
+CallQueueDoneSchema.index({ userId: 1, status: 1 });
 CallQueueDoneSchema.index({ agentId: 1 });
-CallQueueDoneSchema.index({ status: 1 });
 
 export const CallQueueDone = mongoose.models.CallQueueDone || mongoose.model("CallQueueDone", CallQueueDoneSchema);
