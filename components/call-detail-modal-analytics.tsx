@@ -119,6 +119,7 @@ export default function CallDetailModal({
             <Badge variant="outline">{call.endedReason}</Badge>
             <Button
               onClick={handleDownloadAudio}
+              disabled={!call.recordingUrl}
               className="flex items-center gap-2 w-full md:w-auto"
             >
               Download Audio
