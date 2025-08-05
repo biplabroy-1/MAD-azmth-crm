@@ -1,4 +1,4 @@
-// import "server-only"
+import "server-only"
 import User, { type IUser } from "@/modals/User";
 import type { Schedule } from "@/types/interfaces";
 import connectDB from "./connectDB";
