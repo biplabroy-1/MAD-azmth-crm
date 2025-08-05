@@ -12,11 +12,17 @@ import {
 } from "chart.js";
 import { format, formatDistanceToNow } from "date-fns";
 import xlsx from "json-as-xlsx";
-import { Download } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Download, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 import CallDetailModal from "@/components/call-detail-modal-analytics";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -38,6 +44,8 @@ import type {
   AnalyticsCallRecord,
   AnalyticsData,
   Assistant,
+  AssistantContacts,
+  Contacts,
   OverviewData,
 } from "@/types/interfaces";
 import { useDebounce } from "@/components/utils";
@@ -64,9 +72,18 @@ export default function AnalyticsPage({
   const [selectedCall, setSelectedCall] = useState<AnalyticsCallRecord | null>(
     null
   );
+  const [selectedAssistantIdForModal, setSelectedAssistantIdForModal] =
+    useState<string | null>(null);
+  const [assistantContacts, setAssistantContacts] =
+    useState<AssistantContacts | null>(null);
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("detailed");
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
+    new Set()
+  );
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [activeContactTab, setActiveContactTab] = useState("queued");
   const [filters, setFilters] = useState({
     successOnly: true,
     excludeVoicemail: true,
@@ -79,11 +96,7 @@ export default function AnalyticsPage({
   // Debounce filter changes to prevent too many API calls
   const debouncedFilters = useDebounce(filters, 1500);
 
-  useEffect(() => {
-    fetchData();
-  }, [debouncedFilters]); // Use debounced filters instead of raw filters
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Build query parameters
       const queryParams = new URLSearchParams({
@@ -122,7 +135,8 @@ export default function AnalyticsPage({
       );
       console.error("Error fetching data:", err);
     }
-  };
+  }, [debouncedFilters]);
+
   // Prepare chart data
   const prepareChartData = () => {
     if (!analyticsData?.data) return null;
@@ -232,6 +246,101 @@ export default function AnalyticsPage({
     xlsx(data, settings);
   };
 
+  // Contact management functions
+  const filterContacts = (contacts: Contacts[], searchTerm: string) => {
+    if (!searchTerm) return contacts;
+    return contacts.filter(
+      (contact) =>
+        contact.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.number?.includes(searchTerm)
+    );
+  };
+
+  const handleSelectAllContacts = (
+    contacts: Contacts[],
+    isChecked: boolean
+  ) => {
+    const contactIds = contacts.map((contact) => contact._id);
+    setSelectedContacts((prev) => {
+      const newSet = new Set(prev);
+      if (isChecked) {
+        contactIds.forEach((id) => newSet.add(id));
+      } else {
+        contactIds.forEach((id) => newSet.delete(id));
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectContact = (contactId: string, isChecked: boolean) => {
+    setSelectedContacts((prev) => {
+      const newSet = new Set(prev);
+      if (isChecked) {
+        newSet.add(contactId);
+      } else {
+        newSet.delete(contactId);
+      }
+      return newSet;
+    });
+  };
+
+  const exportContactsToXLSX = (contacts: Contacts[], tabName: string) => {
+    const selectedContactsList = contacts.filter((contact) =>
+      selectedContacts.has(contact._id)
+    );
+
+    if (!selectedContactsList.length) {
+      toast({
+        title: "No contacts selected",
+        description: "Please select contacts to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const data = [
+      {
+        sheet: `${tabName} Contacts`,
+        columns: [
+          { label: "Name", value: "name" },
+          { label: "Number", value: "number" },
+          { label: "Status", value: "status" },
+          { label: "Created At", value: "createdAt" },
+          ...(tabName === "Failed"
+            ? [{ label: "Reason", value: "reason" }]
+            : []),
+        ],
+        content: selectedContactsList.map((contact) => ({
+          name: contact.name || "Unnamed Contact",
+          number: contact.number,
+          status: contact.status,
+          createdAt: contact.createdAt
+            ? new Date(contact.createdAt).toLocaleString()
+            : "N/A",
+          ...(contact.reason && { reason: contact.reason }),
+        })),
+      },
+    ];
+
+    const settings = {
+      fileName: `${tabName}_Contacts_${format(new Date(), "yyyy-MM-dd")}`,
+      extraLength: 0,
+      writeMode: "writeFile",
+      writeOptions: {},
+      RTL: false,
+    };
+
+    xlsx(data, settings);
+
+    toast({
+      title: "Export successful",
+      description: `${
+        selectedContactsList.length
+      } ${tabName.toLowerCase()} contacts exported.`,
+      variant: "default",
+    });
+  };
+
   function startQueue() {
     fetch("https://backend-queue.azmth.in/api/start-queue", {
       method: "POST",
@@ -258,6 +367,30 @@ export default function AnalyticsPage({
         })
       );
   }
+
+  const fetchAssistantContacts = async (assistantId: string) => {
+    setAssistantContacts(null); // Clear previous contacts and show loading
+    setSelectedContacts(new Set()); // Clear selected contacts
+    setContactSearchTerm(""); // Clear search term
+    try {
+      const response = await fetch(
+        `/api/get-assistant-contacts?assistantId=${assistantId}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch assistant contacts");
+      }
+      const contacts: AssistantContacts = await response.json();
+      setAssistantContacts(contacts);
+    } catch (err) {
+      console.error("Error fetching assistant contacts:", err);
+      setAssistantContacts(null); // Set to empty array on error
+      toast({
+        title: "Error",
+        description: "Failed to load contacts for this assistant.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleCardClick = (call: AnalyticsCallRecord) => {
     setSelectedCall(call);
@@ -295,6 +428,12 @@ export default function AnalyticsPage({
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Call Analytics</h1>
         <Button onClick={startQueue}>Start Queue</Button>
+                    <Button
+              className="mt-4 px-4 py-2 border-gray-300"
+              onClick={fetchData}
+            >
+              Refresh
+            </Button>
       </div>
       <Tabs
         value={activeTab}
@@ -370,62 +509,68 @@ export default function AnalyticsPage({
               <CardContent>
                 {overview?.queueStats.assistantSpecific && (
                   <div className="mt-4">
-                    <div className="max-h-[300px] overflow-auto">
-                      {/* Header row */}
-                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-gray-200 dark:border-gray-700 pb-2 mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                        <div>Name</div>
-                        <div className="text-center">In Queue</div>
-                        <div className="text-center">Initiated</div>
-                        <div className="text-center">Done</div>
-                        <div className="text-center">Failed</div>
-                      </div>
-
-                      {Object.entries(assistantSpecificData).map(
-                        ([assistantId, stats]) => {
-                          const queued = stats.queued || 0;
-                          const initiated = stats.initiated || 0;
-                          const completed = stats.completed || 0;
-                          const failed = stats.failed || 0;
-
-                          const assistantName =
-                            assistants.find((ass) => ass.id === assistantId)
-                              ?.name || "Unknown Assistant";
-
-                          return (
-                            <div
-                              key={assistantId}
-                              className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center text-gray-800 dark:text-gray-200 border-b border-gray-100 dark:border-gray-800 py-2"
-                            >
-                              <div className="font-medium">{assistantName}</div>
-
-                              <div>
-                                <span className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {queued}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {initiated}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {completed}
-                                </span>
-                              </div>
-
-                              <div>
-                                <span className="inline-block bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                  {failed}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
+                    <Table>
+                      <TableHeader className="cursor-default">
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="text-center">
+                            In Queue
+                          </TableHead>
+                          <TableHead className="text-center">
+                            Initiated
+                          </TableHead>
+                          <TableHead className="text-center">Done</TableHead>
+                          <TableHead className="text-center">Failed</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(assistantSpecificData).map(
+                          ([assistantId, stats]) => {
+                            const queued = stats.queued || 0;
+                            const initiated = stats.initiated || 0;
+                            const completed = stats.completed || 0;
+                            const failed = stats.failed || 0;
+                            const assistantName =
+                              assistants.find((ass) => ass.id === assistantId)
+                                ?.name || "Unknown Assistant";
+                            return (
+                              <TableRow
+                                key={assistantId}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  setSelectedAssistantIdForModal(assistantId);
+                                  fetchAssistantContacts(assistantId);
+                                }}
+                              >
+                                <TableCell className="font-medium">
+                                  {assistantName}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    {queued}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className="inline-block bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    {initiated}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className="inline-block bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    {completed}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className="inline-block bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 px-3 py-1 rounded-full text-xs font-semibold">
+                                    {failed}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
@@ -802,6 +947,407 @@ export default function AnalyticsPage({
       {selectedCall && (
         <CallDetailModal call={selectedCall} onClose={closeModal} />
       )}
+
+      <Dialog
+        open={selectedAssistantIdForModal !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setSelectedAssistantIdForModal(null);
+            setAssistantContacts(null);
+            setSelectedContacts(new Set());
+            setContactSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>
+                Contacts for{" "}
+                {assistants.find((a) => a.id === selectedAssistantIdForModal)
+                  ?.name ?? "Unknown Assistant"}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search contacts by name or number..."
+                value={contactSearchTerm}
+                onChange={(e) => setContactSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              />
+            </div>
+
+            <Tabs
+              value={activeContactTab}
+              onValueChange={setActiveContactTab}
+              className="mt-4"
+            >
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="queued">
+                  Queued ({assistantContacts?.queued?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="completed">
+                  Completed ({assistantContacts?.completed?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="failed">
+                  Failed ({assistantContacts?.failed?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="max-h-[400px] overflow-y-auto py-4">
+                {assistantContacts === null ? (
+                  <div className="text-center text-muted-foreground">
+                    Loading contacts...
+                  </div>
+                ) : (
+                  <>
+                    <TabsContent value="queued" className="space-y-4">
+                      {(() => {
+                        const filteredContacts = filterContacts(
+                          assistantContacts.queued || [],
+                          contactSearchTerm
+                        );
+                        const allSelected =
+                          filteredContacts.length > 0 &&
+                          filteredContacts.every((contact) =>
+                            selectedContacts.has(contact._id)
+                          );
+
+                        return (
+                          <>
+                            {filteredContacts.length > 0 && (
+                              <div className="flex items-center justify-between mb-4 p-2 border-b">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="select-all-queued"
+                                    checked={allSelected}
+                                    onChange={(e) =>
+                                      handleSelectAllContacts(
+                                        filteredContacts,
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                  <label
+                                    htmlFor="select-all-queued"
+                                    className="text-sm font-medium"
+                                  >
+                                    Select All ({filteredContacts.length})
+                                  </label>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    exportContactsToXLSX(
+                                      filteredContacts,
+                                      "Queued"
+                                    )
+                                  }
+                                  disabled={selectedContacts.size === 0}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Export Selected (
+                                  {
+                                    Array.from(selectedContacts).filter((id) =>
+                                      filteredContacts.some((c) => c._id === id)
+                                    ).length
+                                  }
+                                  )
+                                </Button>
+                              </div>
+                            )}
+                            {filteredContacts.length > 0 ? (
+                              <div className="space-y-2">
+                                {filteredContacts.map((contact) => (
+                                  <div
+                                    key={contact._id}
+                                    className="flex items-center space-x-3 p-3 border rounded-md hover:bg-muted/50"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedContacts.has(
+                                        contact._id
+                                      )}
+                                      onChange={(e) =>
+                                        handleSelectContact(
+                                          contact._id,
+                                          e.target.checked
+                                        )
+                                      }
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="font-medium">
+                                        {contact.name || "Unnamed Contact"}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {contact.number}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Created:{" "}
+                                        {contact.createdAt
+                                          ? new Date(
+                                              contact.createdAt
+                                            ).toLocaleDateString()
+                                          : "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                {contactSearchTerm
+                                  ? "No matching queued contacts."
+                                  : "No queued contacts."}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </TabsContent>
+
+                    <TabsContent value="completed" className="space-y-4">
+                      {(() => {
+                        const filteredContacts = filterContacts(
+                          assistantContacts.completed || [],
+                          contactSearchTerm
+                        );
+                        const allSelected =
+                          filteredContacts.length > 0 &&
+                          filteredContacts.every((contact) =>
+                            selectedContacts.has(contact._id)
+                          );
+
+                        return (
+                          <>
+                            {filteredContacts.length > 0 && (
+                              <div className="flex items-center justify-between mb-4 p-2 border-b">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="select-all-completed"
+                                    checked={allSelected}
+                                    onChange={(e) =>
+                                      handleSelectAllContacts(
+                                        filteredContacts,
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                  <label
+                                    htmlFor="select-all-completed"
+                                    className="text-sm font-medium"
+                                  >
+                                    Select All ({filteredContacts.length})
+                                  </label>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    exportContactsToXLSX(
+                                      filteredContacts,
+                                      "Completed"
+                                    )
+                                  }
+                                  disabled={selectedContacts.size === 0}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Export Selected (
+                                  {
+                                    Array.from(selectedContacts).filter((id) =>
+                                      filteredContacts.some((c) => c._id === id)
+                                    ).length
+                                  }
+                                  )
+                                </Button>
+                              </div>
+                            )}
+                            {filteredContacts.length > 0 ? (
+                              <div className="space-y-2">
+                                {filteredContacts.map((contact) => (
+                                  <div
+                                    key={contact._id}
+                                    className="flex items-center space-x-3 p-3 border rounded-md hover:bg-muted/50"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedContacts.has(
+                                        contact._id
+                                      )}
+                                      onChange={(e) =>
+                                        handleSelectContact(
+                                          contact._id,
+                                          e.target.checked
+                                        )
+                                      }
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="font-medium">
+                                        {contact.name || "Unnamed Contact"}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {contact.number}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Created:{" "}
+                                        {contact.createdAt
+                                          ? new Date(
+                                              contact.createdAt
+                                            ).toLocaleDateString()
+                                          : "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                {contactSearchTerm
+                                  ? "No matching completed contacts."
+                                  : "No completed contacts."}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </TabsContent>
+
+                    <TabsContent value="failed" className="space-y-4">
+                      {(() => {
+                        const filteredContacts = filterContacts(
+                          assistantContacts.failed || [],
+                          contactSearchTerm
+                        );
+                        const allSelected =
+                          filteredContacts.length > 0 &&
+                          filteredContacts.every((contact) =>
+                            selectedContacts.has(contact._id)
+                          );
+
+                        return (
+                          <>
+                            {filteredContacts.length > 0 && (
+                              <div className="flex items-center justify-between mb-4 p-2 border-b">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="select-all-failed"
+                                    checked={allSelected}
+                                    onChange={(e) =>
+                                      handleSelectAllContacts(
+                                        filteredContacts,
+                                        e.target.checked
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300"
+                                  />
+                                  <label
+                                    htmlFor="select-all-failed"
+                                    className="text-sm font-medium"
+                                  >
+                                    Select All ({filteredContacts.length})
+                                  </label>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    exportContactsToXLSX(
+                                      filteredContacts,
+                                      "Failed"
+                                    )
+                                  }
+                                  disabled={selectedContacts.size === 0}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Export Selected (
+                                  {
+                                    Array.from(selectedContacts).filter((id) =>
+                                      filteredContacts.some((c) => c._id === id)
+                                    ).length
+                                  }
+                                  )
+                                </Button>
+                              </div>
+                            )}
+                            {filteredContacts.length > 0 ? (
+                              <div className="space-y-2">
+                                {filteredContacts.map((contact) => (
+                                  <div
+                                    key={contact._id}
+                                    className="flex items-center space-x-3 p-3 border rounded-md hover:bg-muted/50"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedContacts.has(
+                                        contact._id
+                                      )}
+                                      onChange={(e) =>
+                                        handleSelectContact(
+                                          contact._id,
+                                          e.target.checked
+                                        )
+                                      }
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="font-medium">
+                                        {contact.name || "Unnamed Contact"}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {contact.number}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Created:{" "}
+                                        {contact.createdAt
+                                          ? new Date(
+                                              contact.createdAt
+                                            ).toLocaleDateString()
+                                          : "N/A"}
+                                      </p>
+                                      {contact.reason && (
+                                        <p className="text-sm text-destructive">
+                                          Reason: {contact.reason}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                {contactSearchTerm
+                                  ? "No matching failed contacts."
+                                  : "No failed contacts."}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </TabsContent>
+                  </>
+                )}
+              </div>
+            </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

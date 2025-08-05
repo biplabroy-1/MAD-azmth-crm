@@ -6,7 +6,7 @@ const CallQueueDoneSchema = new mongoose.Schema({
   agentId: { type: String, required: true },
   name: { type: String, required: true },
   number: { type: String, required: true },
-  status: { type: String, enum: ['pending_initiation', 'initiated', 'failed', 'failed_to_initiate'], required: true },
+  status: { type: String, enum: ['pending_initiation', 'initiated', 'failed'], required: true },
   reason: { type: String }, // optional if failed
   createdAt: { type: Date, default: Date.now },
   completedAt: { type: Date }
