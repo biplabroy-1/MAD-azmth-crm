@@ -20,8 +20,12 @@ export async function saveScheduleToDB(clerkId: string, schedule: Schedule) {
 
 export async function fetchUserSchedule(clerkId: string) {
     await connectDB();
-    const user = (await User.findOne({ clerkId }).lean()) as IUser | null;
-    return user?.weeklySchedule || {};
+    try {
+        const user = await User.findOne({ clerkId }).select("weeklySchedule").lean() as IUser | null;
+        return user?.weeklySchedule || {};
+    } catch (error) {
+        return error
+    }
 }
 
 export async function getAssistantQueueStats(clerkId: string, assistantId: string) {

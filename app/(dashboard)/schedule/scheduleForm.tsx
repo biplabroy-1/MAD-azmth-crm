@@ -62,7 +62,6 @@ interface Schedule {
   };
 }
 
-// Helper function to create default schedule structure
 const createDefaultSchedule = (): Schedule => {
   const defaultSchedule: Schedule = {};
   days.forEach((day) => {
@@ -87,7 +86,6 @@ interface Props {
 }
 
 export default function ScheduleForm({ assistants, initialSchedule }: Props) {
-  // Merge initialSchedule with default structure to ensure all days/slots exist
   const defaultSchedule = createDefaultSchedule();
 
   const [schedule, setSchedule] = useState(initialSchedule || defaultSchedule);
@@ -132,7 +130,6 @@ export default function ScheduleForm({ assistants, initialSchedule }: Props) {
         [type === "start" ? "callTimeStartET" : "callTimeEndET"]: value,
       };
 
-      // Recalculate UTC time from updated ET time
       updatedSlot.callTimeStart = convertETTimeToUTC(
         updatedSlot.callTimeStartET || ""
       );
@@ -186,15 +183,15 @@ export default function ScheduleForm({ assistants, initialSchedule }: Props) {
                     >
                       <SelectTrigger className="max-w-96">
                         <SelectValue placeholder="Select Assistant" />
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {assistants.map((a: Assistant) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
                       </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {assistants.map((a: Assistant) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                     {schedule[day]?.[slot.id]?.assistantId && (
                       <div className="flex gap-2 items-center">

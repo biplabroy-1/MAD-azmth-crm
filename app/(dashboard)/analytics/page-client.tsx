@@ -13,7 +13,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import xlsx from "json-as-xlsx";
 import { Download, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 import CallDetailModal from "@/components/call-detail-modal-analytics";
 import { Button } from "@/components/ui/button";
