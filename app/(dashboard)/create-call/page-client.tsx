@@ -201,7 +201,7 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
 
 
       const response = await fetch(
-        `${process.env.BACKEND_URL}/api/queue-calls`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/queue-calls`,
         {
           method: "POST",
           headers: {
