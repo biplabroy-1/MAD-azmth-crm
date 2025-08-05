@@ -82,6 +82,21 @@ export interface Contact {
   assistantId: string;
   status?: string;
 }
+export interface Contacts {
+  _id: string;
+  agentId: string;
+  name: string;
+  number: string;
+  status: string;
+  reason?: string;
+  createdAt: string;
+}
+
+export interface AssistantContacts {
+  queued: Contacts[]
+  completed: Contacts[]
+  failed: Contacts[]
+}
 
 export interface ScheduleSlot {
   assistantId: string;

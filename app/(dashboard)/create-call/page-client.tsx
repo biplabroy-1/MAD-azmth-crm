@@ -185,7 +185,6 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
     }
 
     setIsSubmitting(true);
-    setQueueModalOpen(false);
 
     try {
       // Format contacts for API
@@ -194,8 +193,15 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
         number: contact.number,
       }));
 
+      // Find the selected assistant's name
+      const selectedAssistant = queueOptions.find(
+        (queue) => queue.id === selectedQueue
+      );
+      const assistantName = selectedAssistant?.name;
+
+
       const response = await fetch(
-        "https://backend-queue.azmth.in/api/queue-calls",
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/queue-calls`,
         {
           method: "POST",
           headers: {
@@ -204,7 +210,8 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
           body: JSON.stringify({
             clerkId,
             contacts: customersData,
-            assistantId: selectedQueue, // Add the selected queue ID to the request
+            assistantId: selectedQueue,
+            assistantName: assistantName,
           }),
         }
       );
@@ -230,11 +237,14 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to create calls. Please try again.",
+          error instanceof Error
+            ? error.message
+            : "Failed to create calls. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+      setQueueModalOpen(false);
     }
   };
 
@@ -345,11 +355,11 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
       <Dialog open={queueModalOpen} onOpenChange={setQueueModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Select Assistant Queue</DialogTitle>
+            <DialogTitle>Select Assistant</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Please select which assistant queue should handle these calls:
+              Please select which assistant should handle these calls:
             </p>
             <Select value={selectedQueue} onValueChange={setSelectedQueue}>
               <SelectTrigger className="w-full">

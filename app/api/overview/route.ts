@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    const userDoc = await User.findOne({ clerkId }).select("_id").lean() as IUser | null;
+    const userDoc = await User.findOne({ clerkId }).select("clerkId").lean() as IUser | null;
 
     if (!userDoc)
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const userId = userDoc._id;
+    const userId = userDoc.clerkId;
 
     const [
       totalInQueue,
