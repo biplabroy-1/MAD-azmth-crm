@@ -47,7 +47,7 @@ export async function getAssistantQueueStats(clerkId: string, assistantId: strin
             CallQueueDone.find({
                 userId: clerkId,
                 agentId: assistantId,
-                status: { $in: ["failed", "failed_to_initiate"] }
+                status: { $in: ["failed"] }
             }).lean()
         ]);
 
