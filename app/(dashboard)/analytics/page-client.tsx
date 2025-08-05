@@ -427,13 +427,15 @@ export default function AnalyticsPage({
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Call Analytics</h1>
-        <Button onClick={startQueue}>Start Queue</Button>
-                    <Button
-              className="mt-4 px-4 py-2 border-gray-300"
-              onClick={fetchData}
-            >
-              Refresh
-            </Button>
+        <div className="flex items-center gap-4">
+          <Button onClick={startQueue}>Start Queue</Button>
+          <Button
+            className="px-4 py-2 border-gray-300"
+            onClick={fetchData}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
       <Tabs
         value={activeTab}
