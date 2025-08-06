@@ -20,9 +20,7 @@ export async function CallRecordsLoader() {
           found
         </p>
       </div>
-      <Suspense fallback={<Loading />}>
-        <CallRecordsContent initialCallRecords={callRecords} />
-      </Suspense>
+      <CallRecordsContent initialCallRecords={callRecords} />
     </div>
   );
 }
