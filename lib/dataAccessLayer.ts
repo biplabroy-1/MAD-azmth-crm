@@ -24,7 +24,7 @@ export async function fetchUserSchedule(clerkId: string) {
         const user = await User.findOne({ clerkId }).select("weeklySchedule").lean() as IUser | null;
         return user?.weeklySchedule || {};
     } catch (error) {
-        return error
+        return {};
     }
 }
 
