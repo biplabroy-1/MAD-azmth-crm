@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Suspense, lazy, useMemo } from "react";
 import Image from "next/image";
 
-// Lazy-load Clerk components for faster paint
+// Lazy-load Clerk components
 const SignedIn = lazy(() =>
   import("@clerk/nextjs").then((mod) => ({ default: mod.SignedIn }))
 );
@@ -32,10 +33,10 @@ export default function NavBar() {
   const links = useMemo(
     () => [
       { href: "/", label: "Home" },
-      { href: "/schedule", label: "Schedule Calls" },
-      { href: "/create-call", label: "Create Calls" },
-      { href: "/analytics", label: "Analytics" },
-      { href: "/call-records", label: "Call Records" },
+      { href: "/dashboard/schedule", label: "Schedule Calls" },
+      { href: "/dashboard/create-call", label: "Create Calls" },
+      { href: "/dashboard/analytics", label: "Analytics" },
+      { href: "/dashboard/call-records", label: "Call Records" },
     ],
     []
   );
@@ -43,14 +44,20 @@ export default function NavBar() {
   const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
 
   return (
-    <nav className="flex w-screen items-center justify-between px-6 py-3 shadow-sm border-b">
+    <nav className="w-full px-4 py-3 shadow-sm border-b flex items-center justify-between">
       {/* Left: Logo */}
       <div className="flex items-center gap-2">
-        <Image width={200} height={200} src={logoSrc} alt="Azmth Logo" className="h-8 w-auto" />
+        <Image
+          width={200}
+          height={200}
+          src={logoSrc}
+          alt="Azmth Logo"
+          className="h-8 w-auto"
+        />
       </div>
 
-      {/* Center: Navigation Links */}
-      <div className="flex gap-3 justify-center flex-1">
+      {/* Center: Nav Links (desktop only) */}
+      <div className="hidden md:flex gap-3 justify-center flex-1">
         <Suspense fallback={null}>
           <SignedIn>
             {links.map(({ href, label }) => {
@@ -73,23 +80,10 @@ export default function NavBar() {
         </Suspense>
       </div>
 
-      {/* Right: Theme Toggle + Auth */}
+      {/* Right: Theme toggle + Auth + Hamburger */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-          <span className="sr-only">Toggle Theme</span>
-        </Button>
-
-        {/* Fixed-width wrapper to prevent layout shift */}
-        <div className="flex items-center gap-2 min-w-[140px] justify-end">
+        {/* Desktop Auth Buttons */}
+        <div className="hidden md:flex items-center gap-2 min-w-[140px] justify-end">
           <Suspense
             fallback={
               <div className="flex items-center gap-2">
@@ -112,7 +106,7 @@ export default function NavBar() {
             </SignedOut>
 
             <SignedIn>
-              <div className="w-[40px] h-[40px] flex justify-center items-center  ">
+              <div className="w-[40px] h-[40px] flex justify-center items-center">
                 <Suspense
                   fallback={
                     <div className="w-full h-full rounded-full bg-muted animate-pulse" />
@@ -124,7 +118,74 @@ export default function NavBar() {
             </SignedIn>
           </Suspense>
         </div>
+
+        {/* Theme toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+          <span className="sr-only">Toggle Theme</span>
+        </Button>
+
+        {/* Mobile Hamburger Menu with Sheet */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+
+          <SheetContent side="right" className="w-[250px]">
+            <div className="flex flex-col gap-4 mt-4">
+              <SignedIn>
+                {links.map(({ href, label }) => {
+                  const isActive = pathname === href;
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`py-2 px-3 rounded-md text-sm ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-accent"
+                      }`}
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </SignedIn>
+
+              <Suspense fallback={null}>
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <Button variant="secondary" className="w-full">
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button variant="outline" className="w-full">
+                      Sign Up
+                    </Button>
+                  </SignUpButton>
+                </SignedOut>
+
+                <SignedIn>
+                  <div className="mt-2">
+                    <UserButton />
+                  </div>
+                </SignedIn>
+              </Suspense>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   );
-}
+              }
