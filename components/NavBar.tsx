@@ -199,7 +199,7 @@ export default function NavBar() {
                 </SignedIn>
               </Suspense>
             </div>
-          </SheetContent>
+          </SheetContent>      {/* if you need the profile in the sidebar comment 203 - 206 and uncomment 186 */}
         <div className="md:hidden mt-4">
           <Suspense fallback={<div className="w-full h-8 bg-muted rounded animate-pulse" />}>
             <UserButton />
