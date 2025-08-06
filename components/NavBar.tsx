@@ -25,6 +25,9 @@ const SignUpButton = lazy(() =>
 const UserButton = lazy(() =>
   import("@clerk/nextjs").then((mod) => ({ default: mod.UserButton }))
 );
+const SignOutButton = lazy(() =>
+  import("@clerk/nextjs").then((mod) => ({ default: mod.SignOutButton }))
+);
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -143,6 +146,7 @@ export default function NavBar() {
 
           <SheetContent side="right" className="w-[250px]">
             <div className="flex flex-col gap-4 mt-4">
+              {/* Mobile Nav Links */}
               <SignedIn>
                 {links.map(({ href, label }) => {
                   const isActive = pathname === href;
@@ -163,6 +167,7 @@ export default function NavBar() {
               </SignedIn>
 
               <Suspense fallback={null}>
+                {/* Mobile Auth Actions */}
                 <SignedOut>
                   <SignInButton mode="modal">
                     <Button variant="secondary" className="w-full">
@@ -177,15 +182,27 @@ export default function NavBar() {
                 </SignedOut>
 
                 <SignedIn>
-                  <div className="mt-2">
-                    <UserButton />
+                  <div className="flex flex-col gap-2 mt-4">
+                    {/* <UserButton /> */}
+                    <Suspense
+                      fallback={
+                        <div className="w-full h-8 bg-muted rounded animate-pulse" />
+                      }
+                    >
+                      <SignOutButton>
+                        <Button variant="destructive" className="w-full">
+                          Sign Out
+                        </Button>
+                      </SignOutButton>
+                    </Suspense>
                   </div>
                 </SignedIn>
               </Suspense>
             </div>
           </SheetContent>
+                    <UserButton />
         </Sheet>
       </div>
     </nav>
   );
-              }
+}
