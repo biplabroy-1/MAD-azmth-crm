@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Loading from "./loading";
-import { ScheduleLoader } from "./schedule-loader";
+import ScheduleLoader from "./schedule-loader";
 
 export default function Page() {
   const today = new Date();
