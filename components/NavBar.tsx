@@ -200,7 +200,11 @@ export default function NavBar() {
               </Suspense>
             </div>
           </SheetContent>
-                    <UserButton />
+        <div className="md:hidden mt-4">
+          <Suspense fallback={<div className="w-full h-8 bg-muted rounded animate-pulse" />}>
+            <UserButton />
+          </Suspense>
+        </div>
         </Sheet>
       </div>
     </nav>
