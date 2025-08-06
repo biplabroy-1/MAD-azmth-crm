@@ -25,9 +25,9 @@ export default function Loading() {
           </div>
 
           {/* Table rows */}
-          {Array.from({ length: 7 }, () => (
+          {Array.from({ length: 7 }).map((_, index) => (
             <div
-              key={`skeleton-row-${id}`}
+              key={`skeleton-row-${id}-${index}`}
               className="flex items-center space-x-4 p-4 border-b last:border-b-0"
             >
               <Skeleton className="h-4 w-16" />
