@@ -23,6 +23,6 @@ export async function getSchedule() {
     if (!userId) {
         return { status: "error", message: "Not authenticated" };
     }
-    const data = fetchUserSchedule(userId);
+    const data = await fetchUserSchedule(userId);
     return data;
 }
