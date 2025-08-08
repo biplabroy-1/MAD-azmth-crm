@@ -76,7 +76,10 @@ export function CallRecordsContent({
           twilioPhoneNumber: record.phoneNumber?.twilioPhoneNumber || "N/A",
           startedAt: formatDate(record.startedAt || record.createdAt),
           endedAt: formatDate(record.endedAt || ""),
-          duration: formatDuration(record.startedAt || "", record.endedAt || ""),
+          duration: formatDuration(
+            record.startedAt || "",
+            record.endedAt || ""
+          ),
           summary: record.analysis?.summary || "",
         })),
       },
@@ -103,49 +106,33 @@ export function CallRecordsContent({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Call Records
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {filteredRecords.length}{" "}
-            {filteredRecords.length === 1 ? "record" : "records"} found
-          </p>
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <Button
+          variant="outline"
+          onClick={exportAsCSV}
+          className="w-full sm:w-auto"
+        >
+          Export as CSV
+        </Button>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, number or Twilio number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 w-full"
+          />
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <Button
-            variant="outline"
-            onClick={exportAsCSV}
-            className="w-full sm:w-auto"
-          >
-            Export as CSV
+        <Button variant="outline">
+          <RefreshCw className={`h-4 w-4 mr-2`} />
+          Refresh
+        </Button>
+        <Link href="/" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, number or Twilio number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-full"
-            />
-          </div>
-          <Button
-            variant="outline"
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2`}
-            />
-            Refresh
-          </Button>
-          <Link href="/" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-        </div>
+        </Link>
       </div>
 
       {filteredRecords.length === 0 ? (
@@ -182,10 +169,18 @@ export function CallRecordsContent({
                   <Badge
                     variant="outline"
                     className={
-                      getStatusBadge(call?.status || "", call?.endedReason || "").color
+                      getStatusBadge(
+                        call?.status || "",
+                        call?.endedReason || ""
+                      ).color
                     }
                   >
-                    {getStatusBadge(call?.status || "", call?.endedReason || "").text}
+                    {
+                      getStatusBadge(
+                        call?.status || "",
+                        call?.endedReason || ""
+                      ).text
+                    }
                   </Badge>
                 </div>
               </CardHeader>
@@ -200,7 +195,8 @@ export function CallRecordsContent({
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm">
-                      Duration: {formatDuration(call.startedAt || "", call.endedAt || "")}
+                      Duration:{" "}
+                      {formatDuration(call.startedAt || "", call.endedAt || "")}
                     </span>
                   </div>
                   {call.endedReason === "customer-did-not-answer" && (

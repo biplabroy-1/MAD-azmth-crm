@@ -126,8 +126,11 @@ export default function RootLayout({
           />
           <link rel="manifest" href="/site.webmanifest" />
         </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+
+
+      {/* prevoius body */}
+      {/* <body
+          className={${geistSans.variable} ${geistMono.variable} antialiased}
           suppressHydrationWarning
         >
           <ThemeProvider
@@ -143,6 +146,32 @@ export default function RootLayout({
               <NavBar />
             </header>
             {children}
+          </ThemeProvider>
+        </body> */}
+
+
+
+
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          suppressHydrationWarning
+        >
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {/* <div className="min-h-screen bg-[url('/mad_bg.jpg')] bg-cover bg-center bg-fixed"> */}
+            <div className="min-h-screen bg-[url('/mad_bg.jpg')] bg-cover bg-fixed">
+              <header className="flex justify-between items-center h-16">
+                <Toaster />
+                <SpeedInsights />
+                <Analytics />
+                <NavBar />
+              </header>
+              {children}
+            </div>
           </ThemeProvider>
         </body>
       </html>
