@@ -12,8 +12,8 @@ import {
 } from "chart.js";
 import { format, formatDistanceToNow } from "date-fns";
 import xlsx from "json-as-xlsx";
-import { Download, Search } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Download, Search, Trash } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 import CallDetailModal from "@/components/call-detail-modal-analytics";
 import { Button } from "@/components/ui/button";
@@ -135,6 +135,10 @@ export default function AnalyticsPage({
       );
       console.error("Error fetching data:", err);
     }
+  }, [debouncedFilters]);
+
+  useEffect(() => {
+    fetchData();
   }, [debouncedFilters]);
 
   // Prepare chart data
@@ -282,6 +286,55 @@ export default function AnalyticsPage({
       }
       return newSet;
     });
+  };
+
+  const handleDeleteQueuedContacts = async () => {
+    if (selectedContacts.size === 0) {
+      toast({
+        title: "No contacts selected",
+        description: "Please select contacts to delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/delete-queued-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactIds: Array.from(selectedContacts),
+          assistantId: selectedAssistantIdForModal,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete contacts');
+      }
+
+      // Refresh the contacts after deletion
+      if (selectedAssistantIdForModal) {
+        await fetchAssistantContacts(selectedAssistantIdForModal);
+      }
+
+      // Clear selection
+      setSelectedContacts(new Set());
+
+      toast({
+        title: "Success",
+        description: `${selectedContacts.size} contact(s) deleted successfully.`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error deleting contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete contacts. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const exportContactsToXLSX = (contacts: Contacts[], tabName: string) => {
@@ -1045,27 +1098,37 @@ export default function AnalyticsPage({
                                     Select All ({filteredContacts.length})
                                   </label>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    exportContactsToXLSX(
-                                      filteredContacts,
-                                      "Queued"
-                                    )
-                                  }
-                                  disabled={selectedContacts.size === 0}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Download className="h-4 w-4" />
-                                  Export Selected (
-                                  {
-                                    Array.from(selectedContacts).filter((id) =>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      exportContactsToXLSX(
+                                        filteredContacts,
+                                        "Queued"
+                                      )
+                                    }
+                                    disabled={selectedContacts.size === 0}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    <span>Export ({Array.from(selectedContacts).filter((id) =>
                                       filteredContacts.some((c) => c._id === id)
-                                    ).length
-                                  }
-                                  )
-                                </Button>
+                                    ).length})</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleDeleteQueuedContacts}
+                                    disabled={selectedContacts.size === 0}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Trash className="h-3.5 w-3.5" />
+                                    <span>Delete ({Array.from(selectedContacts).filter((id) =>
+                                      filteredContacts.some((c) => c._id === id)
+                                    ).length})</span>
+                                  </Button>
+                                </div>
                               </div>
                             )}
                             {filteredContacts.length > 0 ? (
