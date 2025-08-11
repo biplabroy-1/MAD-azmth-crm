@@ -41,7 +41,6 @@ export default function NavBar() {
     []
   );
 
-  const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
 
   return (
     <nav className="w-full px-4 py-3 shadow-sm border-b flex items-center justify-between">
@@ -50,9 +49,9 @@ export default function NavBar() {
         <Image
           width={200}
           height={200}
-          src={logoSrc}
+          src="/logo.svg"
           alt="Azmth Logo"
-          className="h-8 w-auto"
+          className="h-16 w-auto"
         />
       </div>
 
@@ -188,4 +187,4 @@ export default function NavBar() {
       </div>
     </nav>
   );
-              }
+}

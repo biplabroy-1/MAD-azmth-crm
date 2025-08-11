@@ -77,6 +77,7 @@ export default function AnalyticsPage({
   const [assistantContacts, setAssistantContacts] =
     useState<AssistantContacts | null>(null);
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("detailed");
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(
@@ -97,6 +98,7 @@ export default function AnalyticsPage({
   const debouncedFilters = useDebounce(filters, 1500);
 
   const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       // Build query parameters
       const queryParams = new URLSearchParams({
@@ -134,6 +136,8 @@ export default function AnalyticsPage({
         err instanceof Error ? err.message : "An unknown error occurred"
       );
       console.error("Error fetching data:", err);
+    } finally {
+      setIsLoading(false);
     }
   }, [debouncedFilters]);
 
@@ -453,6 +457,25 @@ export default function AnalyticsPage({
     setSelectedCall(null);
   };
 
+  // Initial loading state
+  if (isLoading && !analyticsData && !overviewData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <CardTitle>Loading Analytics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <div className="h-5 w-5 animate-spin border-2 border-current border-t-transparent rounded-full" />
+              <span>Fetching latest data...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -485,8 +508,16 @@ export default function AnalyticsPage({
           <Button
             className="px-4 py-2 border-gray-300"
             onClick={fetchData}
+            disabled={isLoading}
           >
-            Refresh
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                Refreshing
+              </span>
+            ) : (
+              "Refresh"
+            )}
           </Button>
         </div>
       </div>

@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/lib/connectDB';
 import { CallQueue } from '@/modals/callQueue';
+import { redis } from '@/lib/redis';
 
 export async function POST(req: Request) {
     try {
         await connectDB();
         const { userId } = await auth();
-        
+
         if (!userId) {
             return new NextResponse('Unauthorized', { status: 401 });
         }
+        const cacheKey = `overview:${userId}`;
 
         const { contactIds, assistantId } = await req.json();
 
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
             status: 'pending' // Only allow deleting pending calls
         });
 
+        await redis.del(cacheKey);
+        
         return NextResponse.json({
             success: true,
             deletedCount: result.deletedCount,
