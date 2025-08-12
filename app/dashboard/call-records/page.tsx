@@ -1,10 +1,7 @@
 import { Suspense } from "react";
 import { CallRecordsLoading } from "./call-records-loading";
-import { CallRecordsLoader } from "./call-records-loader"; // server component below
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CallRecordsLoader } from "./call-records-loader";
 export const dynamic = "force-dynamic";
-
-
 
 export default function CallRecordsPage() {
   return (
