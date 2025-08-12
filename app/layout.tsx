@@ -127,9 +127,8 @@ export default function RootLayout({
           <link rel="manifest" href="/site.webmanifest" />
         </head>
 
-
-      {/* prevoius body */}
-      {/* <body
+        {/* prevoius body */}
+        {/* <body
           className={${geistSans.variable} ${geistMono.variable} antialiased}
           suppressHydrationWarning
         >
@@ -148,9 +147,6 @@ export default function RootLayout({
             {children}
           </ThemeProvider>
         </body> */}
-
-
-
 
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}

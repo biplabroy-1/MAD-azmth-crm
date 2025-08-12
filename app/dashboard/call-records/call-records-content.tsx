@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,50 +13,65 @@ import { Input } from "@/components/ui/input";
 import {
   Calendar,
   Clock,
-  ArrowLeft,
   RefreshCw,
   Search,
   PhoneOff,
 } from "lucide-react";
-import Link from "next/link";
 import CallDetailModal from "@/components/call-detail-modal";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
+import { formatDate, formatDuration } from "@/lib/utils";
 import type { CallRecord } from "@/types/interfaces";
 import xlsx from "json-as-xlsx";
-import { useDebounce } from "@/components/utils";
+import { useQuery } from "@tanstack/react-query";
+import { getCallRecords } from "./actions";
+
+interface ApiResponse {
+  records: CallRecord[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
 
 interface CallRecordsContentProps {
   initialCallRecords: CallRecord[];
+  initialTotal: number;
 }
 
 export function CallRecordsContent({
   initialCallRecords,
+  initialTotal,
 }: CallRecordsContentProps) {
-  const [filteredRecords, setFilteredRecords] =
-    useState<CallRecord[]>(initialCallRecords);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-  useEffect(() => {
-    if (debouncedSearchTerm) {
-      setFilteredRecords(
-        initialCallRecords.filter(
-          (record) =>
-            record.customer?.number?.includes(debouncedSearchTerm) ||
-            record.customer?.name
-              ?.toLowerCase()
-              .includes(debouncedSearchTerm.toLowerCase()) ||
-            record.phoneNumber?.twilioPhoneNumber?.includes(debouncedSearchTerm)
-        )
-      );
-    } else {
-      setFilteredRecords(initialCallRecords);
-    }
-  }, [debouncedSearchTerm, initialCallRecords]);
+  const limit = 100;
+
+  const { data, isFetching, refetch } = useQuery<ApiResponse>({
+    queryKey: ["callRecords", page],
+    queryFn: async () => {
+      return getCallRecords({ page, limit });
+    },
+    initialData: {
+      records: initialCallRecords,
+      total: initialTotal,
+      page: 1,
+      totalPages: Math.ceil(initialTotal / limit),
+    },
+  });
+
+  // Local search filtering (client-only)
+  const filteredRecords =
+    data?.records.filter(
+      (record) =>
+        record.customer?.number?.includes(searchTerm) ||
+        record.customer?.name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        record.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
+    ) || [];
 
   const exportAsCSV = () => {
-    const data = [
+    const dataExport = [
       {
         sheet: "Call Records",
         columns: [
@@ -84,16 +99,7 @@ export function CallRecordsContent({
         })),
       },
     ];
-
-    const settings = {
-      fileName: "CallRecords",
-      extraLength: 3,
-      writeMode: "writeFile",
-      writeOptions: {},
-      RTL: false,
-    };
-
-    xlsx(data, settings);
+    xlsx(dataExport, { fileName: "CallRecords" });
   };
 
   const handleCardClick = (call: CallRecord) => {
@@ -106,33 +112,46 @@ export function CallRecordsContent({
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-        <Button
-          variant="outline"
-          onClick={exportAsCSV}
-          className="w-full sm:w-auto"
-        >
-          Export as CSV
-        </Button>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, number or Twilio number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 w-full"
-          />
+      <div className="flex w-full justify-between items-center">
+        <div className="">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Call Records
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {data.records.length}{" "}
+              {data.records.length === 1 ? "record" : "records"} found
+            </p>
+          </div>
         </div>
-        <Button variant="outline">
-          <RefreshCw className={`h-4 w-4 mr-2`} />
-          Refresh
-        </Button>
-        <Link href="/" className="w-full sm:w-auto">
-          <Button variant="outline" className="w-full">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            onClick={exportAsCSV}
+            className="w-full sm:w-auto"
+          >
+            Export as CSV
           </Button>
-        </Link>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, number or Twilio number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 w-full"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {filteredRecords.length === 0 ? (
@@ -166,21 +185,8 @@ export function CallRecordsContent({
                       Via: {call.phoneNumber?.twilioPhoneNumber || "N/A"}
                     </CardDescription>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={
-                      getStatusBadge(
-                        call?.status || "",
-                        call?.endedReason || ""
-                      ).color
-                    }
-                  >
-                    {
-                      getStatusBadge(
-                        call?.status || "",
-                        call?.endedReason || ""
-                      ).text
-                    }
+                  <Badge variant="outline" className="text-text">
+                    {call.endedReason}
                   </Badge>
                 </div>
               </CardHeader>
@@ -218,6 +224,27 @@ export function CallRecordsContent({
           ))}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center items-center gap-3 mt-6">
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          Prev
+        </Button>
+        <span>
+          Page {data?.page} of {data?.totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={page === data?.totalPages}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
 
       {selectedCall && (
         <CallDetailModal call={selectedCall} onClose={closeModal} />
