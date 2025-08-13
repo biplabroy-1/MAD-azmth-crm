@@ -12,7 +12,7 @@ export async function getCallRecords({ page = 1, limit = 100 }: { page?: number;
     const skip = (page - 1) * limit;
     const [records, total] = await Promise.all([
         CallData.find({ userId })
-            .sort({ createdAt: -1 })
+            .sort({ startedAt: -1 })
             .skip(skip)
             .limit(limit),
         CallData.countDocuments({ userId }),

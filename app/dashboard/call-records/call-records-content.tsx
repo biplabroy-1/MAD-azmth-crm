@@ -32,15 +32,7 @@ interface ApiResponse {
   totalPages: number;
 }
 
-interface CallRecordsContentProps {
-  initialCallRecords: CallRecord[];
-  initialTotal: number;
-}
-
-export function CallRecordsContent({
-  initialCallRecords,
-  initialTotal,
-}: CallRecordsContentProps) {
+export function CallRecordsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
@@ -50,13 +42,7 @@ export function CallRecordsContent({
     queryKey: ["callRecords", page],
     queryFn: async () => {
       return getCallRecords({ page, limit });
-    },
-    initialData: {
-      records: initialCallRecords,
-      total: initialTotal,
-      page: 1,
-      totalPages: Math.ceil(initialTotal / limit),
-    },
+    }
   });
 
   // Local search filtering (client-only)
@@ -119,8 +105,8 @@ export function CallRecordsContent({
               Call Records
             </h1>
             <p className="text-muted-foreground mt-1">
-              {data.records.length}{" "}
-              {data.records.length === 1 ? "record" : "records"} found
+              {data?.records.length}{" "}
+              {data?.records.length === 1 ? "record" : "records"} found
             </p>
           </div>
         </div>
