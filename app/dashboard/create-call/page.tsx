@@ -3,6 +3,8 @@ import { getAssistents } from "@/lib/vapiHelper";
 import { Suspense } from "react";
 import CreateCall from "./page-client";
 
+export const revalidate = 0;
+
 export default async function Page() {
   const data = await getAssistents();
   if (!data) {
