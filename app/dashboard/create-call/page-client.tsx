@@ -199,7 +199,6 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
       );
       const assistantName = selectedAssistant?.name;
 
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/queue-calls`,
         {
@@ -232,6 +231,7 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
         description:
           `${data.message}` || "Calls have been initiated successfully",
       });
+      setContacts([{ id: "1", name: "", number: "", hasCountryCode: false }]);
     } catch (error: unknown) {
       console.error("Error creating calls:", error);
       toast({
@@ -251,20 +251,6 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/")}
-            className="group flex items-center gap-1 text-muted-foreground hover:text-primary"
-          >
-            <ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-            <span>Back to Dashboard</span>
-          </Button>
-          <Badge variant="secondary" className="px-3 py-1.5">
-            {contacts.length} {contacts.length === 1 ? "Contact" : "Contacts"}
-          </Badge>
-        </div>
-
         {showValidationWarning && contactsWithMissingCountryCode.length > 0 && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
