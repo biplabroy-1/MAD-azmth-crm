@@ -160,7 +160,7 @@ export default function CallDetailModal({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="flex items-center gap-2 w-full md:w-auto">
-                  <Download  className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Download
                 </Button>
               </DropdownMenuTrigger>
@@ -281,7 +281,7 @@ export default function CallDetailModal({
               </div>
             )}
 
-            {call.artifact?.transcript && (
+            {call?.transcript && (
               <div>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
@@ -289,7 +289,7 @@ export default function CallDetailModal({
                 </h3>
                 <div className="border rounded-lg p-4 bg-muted/50">
                   <div className="space-y-3">
-                    {formatTranscript(call.artifact?.transcript)}
+                    {formatTranscript(call?.transcript)}
                   </div>
                 </div>
               </div>
