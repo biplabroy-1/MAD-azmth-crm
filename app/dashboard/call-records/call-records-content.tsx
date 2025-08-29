@@ -10,23 +10,17 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Calendar,
-  Clock,
-  RefreshCw,
-  Search,
-  PhoneOff,
-} from "lucide-react";
+import { Calendar, Clock, RefreshCw, Search, PhoneOff } from "lucide-react";
 import CallDetailModal from "@/components/call-detail-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDuration } from "@/lib/utils";
-import type { CallRecord } from "@/types/interfaces";
 import xlsx from "json-as-xlsx";
 import { useQuery } from "@tanstack/react-query";
 import { getCallRecords } from "./actions";
+import type { CallData } from "@/types";
 
 interface ApiResponse {
-  records: CallRecord[];
+  records: CallData[];
   total: number;
   page: number;
   totalPages: number;
@@ -35,14 +29,14 @@ interface ApiResponse {
 export function CallRecordsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
   const limit = 100;
 
   const { data, isFetching, refetch } = useQuery<ApiResponse>({
     queryKey: ["callRecords", page],
     queryFn: async () => {
       return getCallRecords({ page, limit });
-    }
+    },
   });
 
   // Local search filtering (client-only)
@@ -53,7 +47,7 @@ export function CallRecordsContent() {
         record.customer?.name
           ?.toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        record.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
+        record.phoneNumber?.number?.includes(searchTerm)
     ) || [];
 
   const exportAsCSV = () => {
@@ -71,11 +65,11 @@ export function CallRecordsContent() {
           { label: "Call Summary", value: "summary" },
         ],
         content: filteredRecords.map((record) => ({
-          id: record.id,
+          id: record._id,
           name: record.customer?.name || "Unknown",
           number: record.customer?.number || "N/A",
-          twilioPhoneNumber: record.phoneNumber?.twilioPhoneNumber || "N/A",
-          startedAt: formatDate(record.startedAt || record.createdAt),
+          twilioPhoneNumber: record.phoneNumber?.number || "N/A",
+          startedAt: formatDate(record.startedAt || record.startedAt),
           endedAt: formatDate(record.endedAt || ""),
           duration: formatDuration(
             record.startedAt || "",
@@ -88,7 +82,7 @@ export function CallRecordsContent() {
     xlsx(dataExport, { fileName: "CallRecords" });
   };
 
-  const handleCardClick = (call: CallRecord) => {
+  const handleCardClick = (call: CallData) => {
     setSelectedCall(call);
   };
 
@@ -154,7 +148,7 @@ export function CallRecordsContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRecords.map((call) => (
             <Card
-              key={call.id}
+              key={call._id}
               className="transition-all hover:shadow-lg hover:border-primary/30 cursor-pointer group"
               onClick={() => handleCardClick(call)}
             >
@@ -168,7 +162,7 @@ export function CallRecordsContent() {
                       {call.customer?.number || "N/A"}
                     </CardDescription>
                     <CardDescription className="line-clamp-1 text-xs mt-1">
-                      Via: {call.phoneNumber?.twilioPhoneNumber || "N/A"}
+                      Via: {call.phoneNumber?.number || "N/A"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-text">
@@ -181,7 +175,7 @@ export function CallRecordsContent() {
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm">
-                      {formatDate(call.startedAt || call.createdAt)}
+                      {formatDate(call.startedAt || call.startedAt)}
                     </span>
                   </div>
                   <div className="flex items-center">

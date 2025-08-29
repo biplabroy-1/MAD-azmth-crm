@@ -15,7 +15,7 @@ import xlsx from "json-as-xlsx";
 import { Download, Search, Trash } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { Bar, Pie } from "react-chartjs-2";
-import CallDetailModal from "@/components/call-detail-modal-analytics";
+import CallDetailModal from "@/components/call-detail-modal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,7 +41,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import type {
-  AnalyticsCallRecord,
   AnalyticsData,
   Assistant,
   AssistantContacts,
@@ -49,6 +48,7 @@ import type {
   OverviewData,
 } from "@/types/interfaces";
 import { useDebounce } from "@/components/utils";
+import type { CallData } from "@/types";
 
 // Register Chart.js components
 ChartJS.register(
@@ -69,9 +69,7 @@ export default function AnalyticsPage({
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
     null
   );
-  const [selectedCall, setSelectedCall] = useState<AnalyticsCallRecord | null>(
-    null
-  );
+  const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
   const [selectedAssistantIdForModal, setSelectedAssistantIdForModal] =
     useState<string | null>(null);
   const [assistantContacts, setAssistantContacts] =
@@ -197,7 +195,7 @@ export default function AnalyticsPage({
 
   const chartData = prepareChartData();
 
-  const calls: AnalyticsCallRecord[] = analyticsData?.data || [];
+  const calls: CallData[] = analyticsData?.data || [];
   const overview = overviewData?.data;
   const assistantSpecificData = overview?.queueStats.assistantSpecific || {};
 
@@ -303,10 +301,10 @@ export default function AnalyticsPage({
     }
 
     try {
-      const response = await fetch('/api/delete-queued-contacts', {
-        method: 'POST',
+      const response = await fetch("/api/delete-queued-contacts", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           contactIds: Array.from(selectedContacts),
@@ -315,7 +313,7 @@ export default function AnalyticsPage({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete contacts');
+        throw new Error("Failed to delete contacts");
       }
 
       // Refresh the contacts after deletion
@@ -332,7 +330,7 @@ export default function AnalyticsPage({
         variant: "default",
       });
     } catch (error) {
-      console.error('Error deleting contacts:', error);
+      console.error("Error deleting contacts:", error);
       toast({
         title: "Error",
         description: "Failed to delete contacts. Please try again.",
@@ -449,7 +447,7 @@ export default function AnalyticsPage({
     }
   };
 
-  const handleCardClick = (call: AnalyticsCallRecord) => {
+  const handleCardClick = (call: CallData) => {
     setSelectedCall(call);
   };
 
@@ -1143,9 +1141,18 @@ export default function AnalyticsPage({
                                     className="flex items-center gap-1"
                                   >
                                     <Download className="h-3.5 w-3.5" />
-                                    <span>Export ({Array.from(selectedContacts).filter((id) =>
-                                      filteredContacts.some((c) => c._id === id)
-                                    ).length})</span>
+                                    <span>
+                                      Export (
+                                      {
+                                        Array.from(selectedContacts).filter(
+                                          (id) =>
+                                            filteredContacts.some(
+                                              (c) => c._id === id
+                                            )
+                                        ).length
+                                      }
+                                      )
+                                    </span>
                                   </Button>
                                   <Button
                                     size="sm"
@@ -1155,9 +1162,18 @@ export default function AnalyticsPage({
                                     className="flex items-center gap-1"
                                   >
                                     <Trash className="h-3.5 w-3.5" />
-                                    <span>Delete ({Array.from(selectedContacts).filter((id) =>
-                                      filteredContacts.some((c) => c._id === id)
-                                    ).length})</span>
+                                    <span>
+                                      Delete (
+                                      {
+                                        Array.from(selectedContacts).filter(
+                                          (id) =>
+                                            filteredContacts.some(
+                                              (c) => c._id === id
+                                            )
+                                        ).length
+                                      }
+                                      )
+                                    </span>
                                   </Button>
                                 </div>
                               </div>

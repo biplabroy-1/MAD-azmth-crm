@@ -4,6 +4,7 @@ import {
   Calendar,
   Clock,
   Clock3,
+  Download,
   Hash,
   MessageSquare,
   Phone,
@@ -13,20 +14,26 @@ import { useId, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDate, formatDuration, getStatusBadge } from "@/lib/utils";
-import type { CallRecord } from "@/types/interfaces";
+import { formatDate, formatDuration } from "@/lib/utils";
 import { saveAs } from "file-saver";
 import { toSvg } from "html-to-image";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { CallData } from "@/types";
 
 interface CallDetailModalProps {
-  call: CallRecord;
+  call: CallData;
   onClose: () => void;
 }
 
@@ -64,14 +71,14 @@ export default function CallDetailModal({
     modalRef.current.style.overflow = originalOverflow;
   };
 
-  const handleDownloadAudio = async () => {
-    const audioUrl = call.artifact?.recordingUrl;
+  const handleDownloadAudio = async (type: "mp3" | "wav") => {
+    const audioUrl = call.recordingUrl;
     if (!audioUrl) return;
 
     try {
       const response = await fetch(audioUrl);
       const blob = await response.blob();
-      saveAs(blob, `call-${call.customer?.number}.mp3`);
+      saveAs(blob, `call-${call.customer?.number}.${type}`);
     } catch (err) {
       console.error("Audio download failed:", err);
     }
@@ -145,28 +152,30 @@ export default function CallDetailModal({
               </DialogTitle>
               <DialogDescription className="flex items-center gap-2 mt-1 text-xs md:text-sm overflow-hidden text-ellipsis">
                 <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-mono truncate">{call.id}</span>
+                <span className="font-mono truncate">{call._id}</span>
               </DialogDescription>
             </div>
-            <Badge
-              variant="outline"
-              className={getStatusBadge(call.status || "", call.endedReason).color}
-            >
-              {getStatusBadge(call.status || "", call.endedReason).text}
-            </Badge>
+            <Badge variant="outline">{call.endedReason}</Badge>
 
-            <Button
-              onClick={handleDownload}
-              className="flex items-center gap-2 w-full md:w-auto"
-            >
-              Download as SVG
-            </Button>
-            <Button
-              onClick={handleDownloadAudio}
-              className="flex items-center gap-2 w-full md:w-auto"
-            >
-              Download Audio
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="flex items-center gap-2 w-full md:w-auto">
+                  <Download  className="h-4 w-4" />
+                  Download
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownload}>
+                  📊 Download as SVG
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDownloadAudio("wav")}>
+                  🎵 Download as WAV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleDownloadAudio("mp3")}>
+                  🎵 Download as MP3
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </DialogHeader>
 
@@ -236,7 +245,7 @@ export default function CallDetailModal({
                     <div>
                       <p className="text-sm text-muted-foreground">Ended At</p>
                       <p className="font-medium">
-                        {formatDate(call.endedAt || "")}
+                        {formatDate(call.startedAt || "")}
                       </p>
                     </div>
                   </div>

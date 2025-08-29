@@ -65,6 +65,7 @@ export default function NavBar() {
                 <Link
                   key={href}
                   href={href}
+                  prefetch={true}
                   className={`px-3 py-1 rounded-md transition-colors ${
                     isActive
                       ? "bg-primary text-primary-foreground"

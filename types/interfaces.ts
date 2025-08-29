@@ -1,4 +1,5 @@
 import type { Vapi } from "@vapi-ai/server-sdk";
+import type { CallData } from "./index";
 
 export interface Customer {
   name: string;
@@ -66,7 +67,7 @@ export interface AssistantAggregatedStats {
 }
 
 export interface AnalyticsData {
-  data: AnalyticsCallRecord[];
+  data: CallData[];
 }
 
 /** ────── Subinterfaces ────── **/

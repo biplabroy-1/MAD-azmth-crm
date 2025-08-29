@@ -11,9 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, ChevronLeft, Phone, AlertCircle, Loader } from "lucide-react";
+import { Plus, Phone, AlertCircle, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import TwilioConfigModal from "@/components/TwilioConfig";
 import CSVImporter, { type Contact } from "@/components/CSVImporter";
