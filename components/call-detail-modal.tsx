@@ -91,30 +91,27 @@ export default function CallDetailModal({
       const isAI = line.startsWith("AI:");
       const isUser = line.startsWith("User:");
       // Create a more stable key using the line content and position
-      const stableKey = `${id}-${
-        isAI ? "ai" : isUser ? "user" : "other"
-      }-${index}-${line.substring(0, 10).replace(/\s/g, "")}`;
+      const stableKey = `${id}-${isAI ? "ai" : isUser ? "user" : "other"
+        }-${index}-${line.substring(0, 10).replace(/\s/g, "")}`;
 
       return (
         <div
           key={stableKey}
-          className={`mb-3 p-3 rounded-lg ${
-            isAI
-              ? "bg-muted border-l-4 border-primary"
-              : isUser
+          className={`mb-3 p-3 rounded-lg ${isAI
+            ? "bg-muted border-l-4 border-primary"
+            : isUser
               ? "bg-muted/50 border-l-4 border-muted-foreground"
               : ""
-          }`}
+            }`}
         >
           <div className="flex items-start gap-2">
             <div
-              className={`p-1.5 rounded-full mt-0.5 ${
-                isAI
-                  ? "bg-primary/10 text-primary"
-                  : isUser
+              className={`p-1.5 rounded-full mt-0.5 ${isAI
+                ? "bg-primary/10 text-primary"
+                : isUser
                   ? "bg-muted text-muted-foreground"
                   : ""
-              }`}
+                }`}
             >
               {isAI ? (
                 <MessageSquare className="h-4 w-4" />
@@ -124,9 +121,8 @@ export default function CallDetailModal({
             </div>
             <div className="flex-1 break-words">
               <p
-                className={`text-sm font-medium mb-1 ${
-                  isAI ? "text-primary" : isUser ? "text-foreground" : ""
-                }`}
+                className={`text-sm font-medium mb-1 ${isAI ? "text-primary" : isUser ? "text-foreground" : ""
+                  }`}
               >
                 {isAI ? "Assistant" : isUser ? "Customer" : ""}
               </p>
@@ -144,7 +140,7 @@ export default function CallDetailModal({
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] p-4 overflow-hidden md:w-4/5 sm:w-11/12">
         <DialogHeader className="border-b p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
             <div>
               <DialogTitle className="text-xl md:text-2xl font-semibold flex items-center gap-2">
                 <Phone className="h-5 w-5 text-primary" />
@@ -159,19 +155,19 @@ export default function CallDetailModal({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="flex items-center gap-2 w-full md:w-auto">
+                <Button className="flex items-center gap-2 w-full md:w-auto cursor-pointer">
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDownload}>
+                <DropdownMenuItem onClick={handleDownload} className="cursor-pointer hover:bg-accent">
                   📊 Download as SVG
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownloadAudio("wav")}>
+                <DropdownMenuItem onClick={() => handleDownloadAudio("wav")} className="cursor-pointer">
                   🎵 Download as WAV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownloadAudio("mp3")}>
+                <DropdownMenuItem onClick={() => handleDownloadAudio("mp3")} className="cursor-pointer">
                   🎵 Download as MP3
                 </DropdownMenuItem>
               </DropdownMenuContent>

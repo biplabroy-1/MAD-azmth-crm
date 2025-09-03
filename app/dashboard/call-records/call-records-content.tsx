@@ -17,7 +17,16 @@ import { formatDate, formatDuration } from "@/lib/utils";
 import xlsx from "json-as-xlsx";
 import { useQuery } from "@tanstack/react-query";
 import { getCallRecords } from "./actions";
-import type { CallData } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { ContentLoading } from "./loading";
+import { CallData } from "@/types";
 
 interface ApiResponse {
   records: CallData[];
@@ -26,14 +35,14 @@ interface ApiResponse {
   totalPages: number;
 }
 
-export function CallRecordsContent() {
+export default function CallRecordsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
-  const limit = 100;
+  const [limit, setLimit] = useState(100);
 
   const { data, isFetching, refetch } = useQuery<ApiResponse>({
-    queryKey: ["callRecords", page],
+    queryKey: ["callRecords", page, limit],
     queryFn: async () => {
       return getCallRecords({ page, limit });
     },
@@ -47,7 +56,7 @@ export function CallRecordsContent() {
         record.customer?.name
           ?.toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        record.phoneNumber?.number?.includes(searchTerm)
+        record.call.phoneNumber.twilioPhoneNumber?.includes(searchTerm)
     ) || [];
 
   const exportAsCSV = () => {
@@ -68,13 +77,10 @@ export function CallRecordsContent() {
           id: record._id,
           name: record.customer?.name || "Unknown",
           number: record.customer?.number || "N/A",
-          twilioPhoneNumber: record.phoneNumber?.number || "N/A",
-          startedAt: formatDate(record.startedAt || record.startedAt),
+          twilioPhoneNumber: record.call.phoneNumber.twilioPhoneNumber || "N/A",
+          startedAt: formatDate(record.startedAt),
           endedAt: formatDate(record.endedAt || ""),
-          duration: formatDuration(
-            record.startedAt || "",
-            record.endedAt || ""
-          ),
+          duration: record.durationSeconds,
           summary: record.analysis?.summary || "",
         })),
       },
@@ -92,7 +98,7 @@ export function CallRecordsContent() {
 
   return (
     <>
-      <div className="flex w-full justify-between items-center">
+      <div className="flex w-full justify-between items-center mb-6">
         <div className="">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -104,7 +110,22 @@ export function CallRecordsContent() {
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-col items-center sm:flex-row gap-3 w-full md:w-auto">
+          <Label>Select limit</Label>
+          <Select
+            onValueChange={(value) => setLimit(parseInt(value))}
+            value={limit.toString()}
+          >
+            <SelectTrigger className="w-full sm:w-32">
+              <SelectValue placeholder="Select limit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="200">200</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             onClick={exportAsCSV}
@@ -134,7 +155,9 @@ export function CallRecordsContent() {
         </div>
       </div>
 
-      {filteredRecords.length === 0 ? (
+      {isFetching ? (
+        <ContentLoading />
+      ) : filteredRecords.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
           <Search className="h-10 w-10 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No call records found</h3>
@@ -162,7 +185,7 @@ export function CallRecordsContent() {
                       {call.customer?.number || "N/A"}
                     </CardDescription>
                     <CardDescription className="line-clamp-1 text-xs mt-1">
-                      Via: {call.phoneNumber?.number || "N/A"}
+                      Via: {call.call.phoneNumber?.twilioPhoneNumber || "N/A"}
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-text">
@@ -175,7 +198,7 @@ export function CallRecordsContent() {
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm">
-                      {formatDate(call.startedAt || call.startedAt)}
+                      {formatDate(call.startedAt || call.call.createdAt)}
                     </span>
                   </div>
                   <div className="flex items-center">
@@ -206,20 +229,22 @@ export function CallRecordsContent() {
       )}
 
       {/* Pagination Controls */}
-      <div className="flex justify-center items-center gap-3 mt-6">
+      <div className="flex border fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-background p-4 px-6 rounded-full w-fit z-50 justify-center items-center gap-3 mt-6">
         <Button
+          size="sm"
           variant="outline"
           disabled={page === 1}
           onClick={() => setPage((p) => p - 1)}
         >
           Prev
         </Button>
-        <span>
+        <span className="text-sm opacity-75">
           Page {data?.page} of {data?.totalPages}
         </span>
         <Button
+          size="sm"
           variant="outline"
-          disabled={page === data?.totalPages}
+          disabled={page >= (data?.totalPages || 1)}
           onClick={() => setPage((p) => p + 1)}
         >
           Next

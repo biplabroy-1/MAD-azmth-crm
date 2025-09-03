@@ -3,6 +3,30 @@ import { z } from "zod"
 export const CallDataSchema = z.object({
     _id: z.string(),
     userId: z.string(),
+    insights: z.object({
+        intent: z.enum(["buy", "not_buy", "undecided"])
+            .describe("Did the customer show intent to buy?"),
+
+        main_reason: z.string().max(200)
+            .describe("The main reason for buying, or the main objection if not buying."),
+
+        positive_triggers: z.array(z.string())
+            .describe("Key things they liked or responded positively to."),
+
+        negative_triggers: z.array(z.string())
+            .describe("Key problems or objections they raised."),
+
+        customer_context: z.object({
+            profession: z.string().optional()
+                .describe("Job/profession if clearly mentioned."),
+            industry: z.string().optional()
+                .describe("Industry or business domain if mentioned."),
+            role: z.string().optional()
+                .describe("Role in company if mentioned (e.g., owner, manager)."),
+            personal_notes: z.array(z.string()).optional()
+                .describe("Random personal context explicitly mentioned, e.g., hobbies, likes, casual interests or any other things.")
+        }).optional()
+    }),
     timestamp: z.number(),
     type: z.string(),
     analysis: z.object({ summary: z.string(), successEvaluation: z.string() }),

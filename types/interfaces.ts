@@ -6,8 +6,9 @@ export interface Customer {
   number: string;
 }
 
-export interface CallRecord extends Vapi.Call { }
-export interface Assistant extends Vapi.Assistant { }
+export interface Assistant extends Vapi.Assistant {
+  userId?: string;
+}
 
 export interface AnalyticsCallRecord {
   _id: string;
