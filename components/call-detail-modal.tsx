@@ -164,10 +164,10 @@ export default function CallDetailModal({
                 <DropdownMenuItem onClick={handleDownload} className="cursor-pointer hover:bg-accent">
                   📊 Download as SVG
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownloadAudio("wav")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleDownloadAudio("wav")} className="cursor-pointer hover:bg-accent">
                   🎵 Download as WAV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownloadAudio("mp3")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleDownloadAudio("mp3")} className="cursor-pointer hover:bg-accent">
                   🎵 Download as MP3
                 </DropdownMenuItem>
               </DropdownMenuContent>
