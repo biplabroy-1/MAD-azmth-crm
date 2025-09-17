@@ -10,7 +10,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Calendar, Clock, RefreshCw, Search, PhoneOff } from "lucide-react";
+import { Calendar, Clock, RefreshCw, Search, PhoneOff, SlidersHorizontal } from "lucide-react";
 import CallDetailModal from "@/components/call-detail-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDuration } from "@/lib/utils";
@@ -27,11 +27,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { ContentLoading } from "./loading";
 import { CallData } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ApiResponse {
   records: CallData[];
   total: number;
   page: number;
+  uniqueAssistants: { id: string; name: string }[];
+  uniquePhoneNumbers: string[];
   totalPages: number;
 }
 
@@ -40,10 +43,11 @@ export default function CallRecordsContent() {
   const [page, setPage] = useState(1);
   const [selectedCall, setSelectedCall] = useState<CallData | null>(null);
   const [limit, setLimit] = useState(100);
-  const [assistantId, setAssistantId] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [assistantId, setAssistantId] = useState("all");
+  const [phoneNumber, setPhoneNumber] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [open, setOpen] = useState(false);
 
   const { data, isFetching, refetch } = useQuery<ApiResponse>({
     queryKey: ["callRecords", page, limit, assistantId, phoneNumber, startDate, endDate],
@@ -65,18 +69,8 @@ export default function CallRecordsContent() {
         record.call.phoneNumber?.twilioPhoneNumber?.includes(searchTerm)
     ) || [];
 
-  // get all unique phone numbers
-  const uniquePhoneNumbers = Array.from(
-    new Set(filteredRecords.map((record) => record.call.phoneNumber?.twilioPhoneNumber))
-  );
-  // get all unique assistents name and ids
-  const uniqueAssistants = Array.from(
-    new Map(
-      filteredRecords
-        .filter((record) => record.assistant)
-        .map((record) => [record.assistant.name, record.assistant.id])
-    )
-  ).map(([name, id]) => ({ name, id }));
+  const uniqueAssistants = data?.uniqueAssistants || [];
+  const uniquePhoneNumbers = data?.uniquePhoneNumbers || [];
 
   const exportAsCSV = () => {
     const dataExport = [
@@ -129,124 +123,121 @@ export default function CallRecordsContent() {
           </p>
         </div>
 
-        {/* Filters + Actions */}
-        <div className="flex flex-col items-center sm:flex-row gap-3 w-full md:w-auto">
-
-          {/* Limit Selector */}
-          <div className="flex items-center gap-2">
-            <Label>Limit</Label>
-            <Select
-              onValueChange={(value) => setLimit(parseInt(value))}
-              value={limit.toString()}
-            >
-              <SelectTrigger className="w-28">
-                <SelectValue placeholder="Select limit" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="200">200</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Assistant Filter */}
-          <div className="flex items-center gap-2">
-            <Label>Assistant</Label>
-            <Select
-              onValueChange={(value) => {
-                console.log(value)
-                setAssistantId(value)
-              }}
-              value={assistantId}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All assistants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {uniqueAssistants.map((assistant) => (
-                  <SelectItem key={assistant.id} value={assistant.id}>
-                    {assistant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Number Filter */}
-          <div className="flex items-center gap-2">
-            <Label>Number</Label>
-            <Select
-              onValueChange={(value) => setPhoneNumber(value)}
-              value={phoneNumber}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All numbers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {uniquePhoneNumbers.map((number) => (
-                  <SelectItem key={number} value={number}>
-                    {number}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Time Range Filter */}
-          <div className="flex items-center gap-2">
-            <Label>Date Range</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-36"
-            />
-            <span>-</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-36"
-            />
-          </div>
-
-          {/* Export Button */}
-          <Button
-            variant="outline"
-            onClick={exportAsCSV}
-            className="w-full sm:w-auto"
-          >
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {/* Export */}
+          <Button variant="outline" onClick={exportAsCSV}>
             Export as CSV
           </Button>
 
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
+          {/* Search */}
+          <div className="relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by name, number or Twilio number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-full"
+              className="pl-9 w-64"
             />
           </div>
 
-          {/* Refresh Button */}
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`}
-            />
+          {/* Refresh */}
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
+
+          {/* Filters in Modal */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Filters</DialogTitle>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                {/* Limit */}
+                <div className="flex items-center gap-2">
+                  <Label>Limit</Label>
+                  <Select
+                    onValueChange={(value) => setLimit(parseInt(value))}
+                    value={limit.toString()}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="Select limit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="200">200</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Assistant */}
+                <div className="flex items-center gap-2">
+                  <Label>Assistant</Label>
+                  <Select onValueChange={setAssistantId} value={assistantId}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All assistants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {uniqueAssistants.map((a) => (
+                        <SelectItem key={`assistant-${a.id}`} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Phone Number */}
+                <div className="flex items-center gap-2">
+                  <Label>Number</Label>
+                  <Select onValueChange={setPhoneNumber} value={phoneNumber}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All numbers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {uniquePhoneNumbers.map((n) => (
+                        <SelectItem key={`phone-${n}`} value={n}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date Range */}
+                <div className="flex items-center gap-2">
+                  <Label>Date Range</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-36"
+                  />
+                  <span>-</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-36"
+                  />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
-      </div >
+      </div>
 
 
       {

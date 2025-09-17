@@ -21,7 +21,7 @@ export async function getCallRecords({
     await connectDB();
     const { userId } = await auth();
     if (!userId) {
-        return { records: [], total: 0, page, totalPages: 1 };
+        return { records: [], total: 0, page, totalPages: 1, uniqueAssistants: [], uniquePhoneNumbers: [] };
     }
 
     const skip = (page - 1) * limit;
@@ -43,18 +43,27 @@ export async function getCallRecords({
         if (endDate) query.startedAt.$lte = new Date(endDate);
     }
 
-    const [records, total] = await Promise.all([
+    const [records, total, assistantsRaw, phoneNumbers] = await Promise.all([
         CallData.find(query)
             .sort({ startedAt: -1 })
             .skip(skip)
             .limit(limit),
         CallData.countDocuments(query),
+        CallData.distinct("assistant", { userId }), // returns array of assistant objects
+        CallData.distinct("call.phoneNumber.twilioPhoneNumber", { userId }),
     ]);
+
+    // Ensure assistants are mapped to { id, name }
+    const uniqueAssistants = assistantsRaw
+        .filter((a: any) => a && a.id && a.name)
+        .map((a: any) => ({ id: a.id, name: a.name }));
 
     return {
         records: JSON.parse(JSON.stringify(records)),
         total,
         page,
+        uniqueAssistants,
+        uniquePhoneNumbers: phoneNumbers.filter(Boolean),
         totalPages: Math.ceil(total / limit),
     };
 }
