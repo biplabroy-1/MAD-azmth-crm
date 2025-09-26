@@ -19,7 +19,7 @@ export default function CallRecordsLoading() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }, (_, index) => (
-          <Card key={`skeleton-${index}-${Date.now()}`}>
+          <Card key={`skeleton-${index}`}>
             <CardHeader>
               <Skeleton className="h-6 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
@@ -48,12 +48,11 @@ export default function CallRecordsLoading() {
   );
 }
 
-
 export function ContentLoading() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: 12 }, (_, index) => (
-        <Card key={`skeleton-${index}-${Date.now()}`}>
+        <Card key={`skeleton-${index}`}>
           <CardHeader>
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-4 w-1/2" />

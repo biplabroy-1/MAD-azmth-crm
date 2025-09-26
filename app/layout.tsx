@@ -4,8 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/toaster";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
-import NavBar from "@/components/NavBar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -125,29 +125,8 @@ export default function RootLayout({
             href="/favicon-16x16.png"
           />
           <link rel="manifest" href="/site.webmanifest" />
+          <GoogleAnalytics gaId="G-Z2SBFHE521" />
         </head>
-
-        {/* prevoius body */}
-        {/* <body
-          className={${geistSans.variable} ${geistMono.variable} antialiased}
-          suppressHydrationWarning
-        >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <header className="flex justify-between items-center h-16">
-              <Toaster />
-              <SpeedInsights />
-              <Analytics />
-              <NavBar />
-            </header>
-            {children}
-          </ThemeProvider>
-        </body> */}
-
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning
@@ -155,22 +134,16 @@ export default function RootLayout({
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
           >
-            {/* <div className="min-h-screen bg-[url('/mad_bg.jpg')] bg-cover bg-center bg-fixed"> */}
-            <div className="min-h-screen bg-[url('/mad_bg.jpg')] bg-cover bg-fixed">
-              <header className="flex justify-between items-center h-16">
-                <Toaster />
-                <SpeedInsights />
-                <Analytics />
-                <NavBar />
-              </header>
-              {children}
-            </div>
+            <header>
+              <Toaster />
+              <SpeedInsights />
+              <Analytics />
+            </header>
+            {children}
           </ThemeProvider>
         </body>
       </html>
-    </ClerkProvider>
+    </ClerkProvider >
   );
 }

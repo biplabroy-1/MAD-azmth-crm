@@ -4,7 +4,7 @@ let cachedConnection: typeof mongoose | null = null;
 
 const connectDB = async () => {
   if (cachedConnection) {
-    console.log("Using cached database connection");
+    console.info("Using cached database connection");
     return cachedConnection;
   }
 
@@ -14,7 +14,7 @@ const connectDB = async () => {
       throw new Error("MongoDB URI not found");
     }
 
-    console.log("Establishing new database connection");
+    console.info("Establishing new database connection");
     cachedConnection = await mongoose.connect(dbUri);
     return cachedConnection;
   } catch (error) {

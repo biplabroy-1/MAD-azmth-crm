@@ -73,9 +73,7 @@ const UserSchema = new Schema<IUser>(
     firstName: String,
     lastName: String,
     profileImageUrl: String,
-
     twilioConfig: { type: TwilioConfigSchema },
-    content: { type: String },
 
     weeklySchedule: { type: WeeklyScheduleSchema }
   },
