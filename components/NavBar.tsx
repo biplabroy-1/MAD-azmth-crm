@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Suspense, lazy, useMemo } from "react";
 import Image from "next/image";
+import type { Route } from "next";
+import { useUser } from "@clerk/nextjs";
 
 // Lazy-load Clerk components
 const SignedIn = lazy(() =>
@@ -25,34 +27,42 @@ const SignUpButton = lazy(() =>
 const UserButton = lazy(() =>
   import("@clerk/nextjs").then((mod) => ({ default: mod.UserButton }))
 );
+const SignOutButton = lazy(() =>
+  import("@clerk/nextjs").then((mod) => ({ default: mod.SignOutButton }))
+);
 
 export default function NavBar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
-  const links = useMemo(
+  const links = useMemo<{ href: Route; label: string }[]>(
     () => [
-      { href: "/", label: "Home" },
-      { href: "/dashboard/schedule", label: "Schedule Calls" },
+      { href: "/dashboard", label: "Home" },
+      { href: "/dashboard/assistants", label: "Assistants" },
+      { href: "/dashboard/numbers", label: "Numbers" },
       { href: "/dashboard/create-call", label: "Create Calls" },
-      { href: "/dashboard/analytics", label: "Analytics" },
       { href: "/dashboard/call-records", label: "Call Records" },
+      { href: "/dashboard/schedule", label: "Weekly Schedule" },
     ],
     []
   );
 
+  // const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
+  const logoSrc = "/logo.svg"
 
   return (
     <nav className="w-full px-4 py-3 shadow-sm border-b flex items-center justify-between">
       {/* Left: Logo */}
       <div className="flex items-center gap-2">
-        <Image
-          width={200}
-          height={200}
-          src="/logo.svg"
-          alt="Azmth Logo"
-          className="h-16 w-auto"
-        />
+        <Link href="/dashboard">
+          <Image
+            width={200}
+            height={200}
+            src={logoSrc}
+            alt="Azmth Logo"
+            className="h-8 w-auto"
+          />
+        </Link>
       </div>
 
       {/* Center: Nav Links (desktop only) */}
@@ -65,12 +75,10 @@ export default function NavBar() {
                 <Link
                   key={href}
                   href={href}
-                  prefetch={true}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:text-primary hover:bg-accent"
-                  }`}
+                  className={`px-3 py-1 rounded-md transition-colors ${isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:text-primary hover:bg-accent"
+                    }`}
                 >
                   {label}
                 </Link>
@@ -150,11 +158,10 @@ export default function NavBar() {
                     <Link
                       key={href}
                       href={href}
-                      className={`py-2 px-3 rounded-md text-sm ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-accent"
-                      }`}
+                      className={`py-2 px-3 rounded-md text-sm ${isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-foreground hover:text-primary hover:bg-accent"
+                        }`}
                     >
                       {label}
                     </Link>
@@ -177,8 +184,19 @@ export default function NavBar() {
                 </SignedOut>
 
                 <SignedIn>
-                  <div className="mt-2">
-                    <UserButton />
+                  <div className="mt-2 flex justify-between items-center gap-2">
+                    <Image
+                      width={200}
+                      height={200}
+                      src={useUser().user?.imageUrl || logoSrc}
+                      alt="User Profile"
+                      className="h-8 w-auto rounded-full"
+                    />
+                    <SignOutButton>
+                      <Button variant="destructive">
+                        Sign Out
+                      </Button>
+                    </SignOutButton>
                   </div>
                 </SignedIn>
               </Suspense>

@@ -156,87 +156,110 @@ export default function ScheduleForm({ assistants, initialSchedule }: Props) {
   };
 
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Day</TableHead>
-            {timeSlots.map((slot) => (
-              <TableHead key={slot.id} className="capitalize">
-                {slot.id}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {days.map((day) => (
-            <TableRow key={day}>
-              <TableCell className="capitalize">{day}</TableCell>
-              {timeSlots.map((slot) => (
-                <TableCell key={slot.id}>
-                  <div className="space-y-2">
-                    <Select
-                      value={schedule[day]?.[slot.id]?.assistantId || ""}
-                      onValueChange={(value) =>
-                        handleSelect(day, slot.id, value)
-                      }
-                    >
-                      <SelectTrigger className="max-w-96">
-                        <SelectValue placeholder="Select Assistant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {assistants.map((a: Assistant) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {schedule[day]?.[slot.id]?.assistantId && (
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="time"
-                          value={
-                            schedule[day]?.[slot.id]?.callTimeStartET || ""
+    <div className="max-h-screen overflow-hidden flex flex-col p-2 sm:p-4">
+      {/* Responsive scrollable table */}
+      <div className="flex-1 overflow-auto">
+        <div className="overflow-x-auto border rounded-md">
+          <Table className="min-w-[850px] text-sm">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-28">Day</TableHead>
+                {timeSlots.map((slot) => (
+                  <TableHead key={slot.id} className="capitalize text-center">
+                    {slot.id}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {days.map((day) => (
+                <TableRow key={day} className="text-xs h-20">
+                  <TableCell className="capitalize font-medium">{day}</TableCell>
+                  {timeSlots.map((slot) => (
+                    <TableCell key={slot.id} className="p-2">
+                      <div className="flex flex-col sm:flex-row gap-2 items-center">
+                        <Select
+                          value={schedule[day]?.[slot.id]?.assistantId || ""}
+                          onValueChange={(value) =>
+                            handleSelect(day, slot.id, value)
                           }
-                          onChange={(e) =>
-                            handleTimeChange(
-                              day,
-                              slot.id,
-                              "start",
-                              e.target.value
-                            )
-                          }
-                          className="border rounded p-1"
-                        />
-                        <span>to</span>
-                        <input
-                          type="time"
-                          value={schedule[day]?.[slot.id]?.callTimeEndET || ""}
-                          onChange={(e) =>
-                            handleTimeChange(
-                              day,
-                              slot.id,
-                              "end",
-                              e.target.value
-                            )
-                          }
-                          className="border rounded p-1"
-                        />
+                        >
+                          <SelectTrigger className="w-48 sm:w-56 h-10 text-xs">
+                            <SelectValue placeholder="Select Assistant" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {assistants.map((a: Assistant) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="flex gap-1 items-center">
+                          <input
+                            type="time"
+                            value={
+                              schedule[day]?.[slot.id]?.callTimeStartET || ""
+                            }
+                            onChange={(e) =>
+                              handleTimeChange(
+                                day,
+                                slot.id,
+                                "start",
+                                e.target.value
+                              )
+                            }
+                            className={`border rounded px-1 h-8 text-xs w-20 ${!schedule[day]?.[slot.id]?.assistantId
+                              ? "invisible"
+                              : "visible"
+                              }`}
+                          />
+                          <span
+                            className={`text-xs ${!schedule[day]?.[slot.id]?.assistantId
+                              ? "invisible"
+                              : "visible"
+                              }`}
+                          >
+                            to
+                          </span>
+                          <input
+                            type="time"
+                            value={schedule[day]?.[slot.id]?.callTimeEndET || ""}
+                            onChange={(e) =>
+                              handleTimeChange(
+                                day,
+                                slot.id,
+                                "end",
+                                e.target.value
+                              )
+                            }
+                            className={`border rounded px-1 h-8 text-xs w-20 ${!schedule[day]?.[slot.id]?.assistantId
+                              ? "invisible"
+                              : "visible"
+                              }`}
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </TableCell>
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <Button onClick={handleSubmit} disabled={isPending} className="mt-4">
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Submit button same as before */}
+      <Button
+        onClick={handleSubmit}
+        disabled={isPending}
+        className="mt-4 self-start"
+      >
         {isPending ? "Submitting..." : "Submit Schedule"}
       </Button>
-      {status && <p className="mt-4 text-sm text-gray-500">{status}</p>}
-    </>
+      {status && <p className="mt-2 text-sm text-gray-500">{status}</p>}
+    </div>
   );
 }

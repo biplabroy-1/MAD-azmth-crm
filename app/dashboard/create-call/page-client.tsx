@@ -1,38 +1,24 @@
 "use client";
 
-import type React from "react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Plus, Phone, AlertCircle, Loader } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import TwilioConfigModal from "@/components/TwilioConfig";
-import CSVImporter, { type Contact } from "@/components/CSVImporter";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser } from "@clerk/nextjs";
-import ContactCard from "@/components/ContactCard";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Card, CardHeader, CardTitle, CardContent, CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Phone, Loader, AlertCircle } from "lucide-react";
+
+import CSVImporter, { type Contact } from "@/components/CSVImporter";
+import ContactCard from "@/components/ContactCard";
 import type { Assistant } from "@/types/interfaces";
 
 interface CreateCallProps {
@@ -40,105 +26,65 @@ interface CreateCallProps {
 }
 
 export default function CreateCall({ queueOptions }: CreateCallProps) {
+  const { user } = useUser();
+  const { toast } = useToast();
+  const clerkId = user?.id;
+
   const [contacts, setContacts] = useState<Contact[]>([
     { id: "1", name: "", number: "", hasCountryCode: false },
   ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [contactsWithMissingCountryCode, setContactsWithMissingCountryCode] =
-    useState<Contact[]>([]);
-  const [showValidationWarning, setShowValidationWarning] = useState(false);
+  const [contactsMissingCode, setContactsMissingCode] = useState<Contact[]>([]);
+  const [showWarning, setShowWarning] = useState(false);
   const [queueModalOpen, setQueueModalOpen] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState("");
-  const { user } = useUser();
-  const clerkId = user?.id;
-  const router = useRouter();
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validate if a phone number has a country code
-  const hasCountryCode = (number: string): boolean => {
-    // Check if number starts with + followed by digits
-    return /^\+\d/.test(number.trim());
-  };
+  /** Helpers */
+  const hasCountryCode = (number: string) => /^\+\d/.test(number.trim());
 
-  const addContact = () => {
-    setContacts([
-      ...contacts,
-      {
-        id: Date.now().toString(),
-        name: "",
-        number: "",
-        hasCountryCode: false,
-      },
+  const addContact = () =>
+    setContacts((prev) => [
+      ...prev,
+      { id: Date.now().toString(), name: "", number: "", hasCountryCode: false },
     ]);
-  };
 
   const removeContact = (id: string) => {
     if (contacts.length === 1) {
-      toast({
+      return toast({
         title: "Cannot remove",
         description: "You need at least one contact",
         variant: "destructive",
       });
-      return;
     }
-    setContacts(contacts.filter((contact) => contact.id !== id));
+    setContacts(contacts.filter((c) => c.id !== id));
   };
 
-  const updateContact = (
-    id: string,
-    field: "name" | "number",
-    value: string
-  ) => {
-    setContacts(
-      contacts.map((contact) =>
-        contact.id === id
-          ? {
-              ...contact,
-              [field]: value,
-              // Update hasCountryCode when modifying the number
-              ...(field === "number"
-                ? { hasCountryCode: hasCountryCode(value) }
-                : {}),
-            }
-          : contact
+  const updateContact = (id: string, field: "name" | "number", value: string) =>
+    setContacts((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? { ...c, [field]: value, ...(field === "number" ? { hasCountryCode: hasCountryCode(value) } : {}) }
+          : c
       )
     );
-  };
 
-  const handleImportContacts = (importedContacts: Contact[]) => {
-    // Check for missing country codes
-    const missing = importedContacts.filter(
-      (contact) => !contact.hasCountryCode
-    );
+  /** Import CSV */
+  const handleImportContacts = (imported: Contact[]) => {
+    const missing = imported.filter((c) => !c.hasCountryCode);
+    setContactsMissingCode(missing);
+    setShowWarning(missing.length > 0);
 
-    // Set missing country code contacts for display
-    setContactsWithMissingCountryCode(missing);
-
-    // Show validation warning if any contacts are missing country codes
-    setShowValidationWarning(missing.length > 0);
-
-    // Add imported contacts to existing ones or replace them
     if (contacts.length === 1 && !contacts[0].name && !contacts[0].number) {
-      // If there's only one empty contact, replace it
-      setContacts(importedContacts);
+      setContacts(imported);
     } else {
-      // Otherwise, append the imported contacts
-      setContacts((prevContacts) => [...prevContacts, ...importedContacts]);
-
-      toast({
-        title: "Contacts added",
-        description: `Added ${importedContacts.length} contacts from CSV import`,
-      });
+      setContacts((prev) => [...prev, ...imported]);
+      toast({ title: "Contacts added", description: `Added ${imported.length} contacts.` });
     }
   };
 
+  /** Validation */
   const validateContacts = () => {
-    // Validate contacts
-    const invalidContacts = contacts.filter(
-      (contact) => !contact.name || !contact.number
-    );
-
-    if (invalidContacts.length > 0) {
+    if (contacts.some((c) => !c.name || !c.number)) {
       toast({
         title: "Validation Error",
         description: "All contacts must have a name and phone number",
@@ -147,98 +93,54 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
       return false;
     }
 
-    // Check for missing country codes
-    const contactsMissingCountryCode = contacts.filter(
-      (contact) => !hasCountryCode(contact.number)
-    );
-
-    if (contactsMissingCountryCode.length > 0) {
+    const missing = contacts.filter((c) => !hasCountryCode(c.number));
+    if (missing.length) {
+      setContactsMissingCode(missing);
+      setShowWarning(true);
       toast({
         title: "Missing Country Codes",
-        description: `${contactsMissingCountryCode.length} contacts are missing country codes. Please add country codes (e.g., +1) to all phone numbers.`,
+        description: `${missing.length} contacts missing country codes.`,
         variant: "destructive",
       });
-      setContactsWithMissingCountryCode(contactsMissingCountryCode);
-      setShowValidationWarning(true);
       return false;
     }
-
     return true;
   };
 
-  const handleProceedWithSubmit = (e: React.FormEvent) => {
+  /** Submit */
+  const handleProceed = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateContacts()) {
-      setQueueModalOpen(true);
-    }
+    if (validateContacts()) setQueueModalOpen(true);
   };
 
   const handleFinalSubmit = async () => {
     if (!selectedQueue) {
-      toast({
+      return toast({
         title: "Queue Required",
         description: "Please select an assistant queue",
         variant: "destructive",
       });
-      return;
     }
 
     setIsSubmitting(true);
-
     try {
-      // Format contacts for API
-      const customersData = contacts.map((contact) => ({
-        name: contact.name,
-        number: contact.number,
-      }));
+      const customersData = contacts.map(({ name, number }) => ({ name, number }));
+      const assistant = queueOptions.find((q) => q.id === selectedQueue);
 
-      // Find the selected assistant's name
-      const selectedAssistant = queueOptions.find(
-        (queue) => queue.id === selectedQueue
-      );
-      const assistantName = selectedAssistant?.name;
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/queue-calls`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            clerkId,
-            contacts: customersData,
-            assistantId: selectedQueue,
-            assistantName: assistantName,
-          }),
-        }
-      );
-      const data = await response.json();
-      if (data.error) {
-        toast({
-          title: "Error",
-          description: data.error,
-          variant: "destructive",
-        });
-      }
-      if (!response.ok) {
-        throw new Error("Failed to create calls");
-      }
-
-      toast({
-        title: "Success",
-        description:
-          `${data.message}` || "Calls have been initiated successfully",
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/queue-calls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkId, contacts: customersData, assistantId: selectedQueue, assistantName: assistant?.name }),
       });
-      setContacts([{ id: "1", name: "", number: "", hasCountryCode: false }]);
-    } catch (error: unknown) {
-      console.error("Error creating calls:", error);
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to create calls");
+
+      toast({ title: "Success", description: data.message || "Calls have been queued." });
+    } catch (err) {
       toast({
         title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create calls. Please try again.",
+        description: err instanceof Error ? err.message : "Failed to create calls.",
         variant: "destructive",
       });
     } finally {
@@ -250,25 +152,16 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {showValidationWarning && contactsWithMissingCountryCode.length > 0 && (
-          <Alert variant="destructive" className="mb-4">
+        {showWarning && contactsMissingCode.length > 0 && (
+          <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Country Codes Required</AlertTitle>
             <AlertDescription>
-              <p className="mb-2">
-                {contactsWithMissingCountryCode.length}{" "}
-                {contactsWithMissingCountryCode.length === 1
-                  ? "contact is"
-                  : "contacts are"}{" "}
-                missing country codes. Please add country codes (e.g., +1) to
-                all phone numbers.
-              </p>
-              {contactsWithMissingCountryCode.length <= 5 && (
-                <ul className="list-disc pl-5 text-sm">
-                  {contactsWithMissingCountryCode.map((contact) => (
-                    <li key={contact.id}>
-                      {contact.name}: {contact.number}
-                    </li>
+              {contactsMissingCode.length} contact(s) missing country codes. Please add them (e.g., +1).
+              {contactsMissingCode.length <= 5 && (
+                <ul className="list-disc pl-5 mt-2 text-sm">
+                  {contactsMissingCode.map((c) => (
+                    <li key={c.id}>{c.name}: {c.number}</li>
                   ))}
                 </ul>
               )}
@@ -276,60 +169,35 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
           </Alert>
         )}
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="border-b px-8 py-6">
-            <CardTitle className="text-3xl font-semibold  mb-2 flex justify-between items-center">
-              Initiate New Calls
-              <TwilioConfigModal />
-            </CardTitle>
+        <Card className="shadow-lg border">
+          <CardHeader className="flex justify-between items-center border-b">
+            <CardTitle className="text-2xl font-semibold">Initiate New Calls</CardTitle>
           </CardHeader>
-          <form onSubmit={handleProceedWithSubmit}>
-            <CardContent className="px-8 py-6 space-y-6">
-              <div className="mb-6">
-                {/* CSV Import Component */}
-                <CSVImporter onImportContacts={handleImportContacts} />
-              </div>
 
-              <ScrollArea className="space-y-5c h-96 rounded-md border px-4">
-                {contacts.map((contact, index) => (
+          <form onSubmit={handleProceed}>
+            <CardContent className="space-y-6 mt-4">
+              <CSVImporter onImportContacts={handleImportContacts} />
+
+              <ScrollArea className="h-96 rounded-md border p-4 space-y-4">
+                {contacts.map((contact, i) => (
                   <ContactCard
                     key={contact.id}
                     contact={contact}
-                    index={index}
+                    index={i}
                     updateContact={updateContact}
                     removeContact={removeContact}
                   />
                 ))}
               </ScrollArea>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addContact}
-                className="w-full border-dashed hover:bg-primary/5 h-12 hover:text-primary"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                <span className="font-medium">Add Another Contact</span>
+              <Button type="button" onClick={addContact} variant="outline" className="w-full h-12 border-dashed">
+                <Plus className="h-5 w-5 mr-2" /> Add Contact
               </Button>
             </CardContent>
 
-            <CardFooter className="px-8 py-5 border-t flex flex-col sm:flex-row justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/")}
-                className="w-full sm:w-auto h-11"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="w-full sm:w-auto h-11 bg-gradient-to-r from-primaryshadow-md"
-              >
-                <span className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Start Calls
-                </span>
+            <CardFooter className="flex flex-col sm:flex-row justify-end gap-3 border-t pt-4">
+              <Button type="submit" className="w-full sm:w-auto h-11">
+                <Phone className="h-4 w-4 mr-2" /> Start Calls
               </Button>
             </CardFooter>
           </form>
@@ -343,39 +211,22 @@ export default function CreateCall({ queueOptions }: CreateCallProps) {
             <DialogTitle>Select Assistant</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Please select which assistant should handle these calls:
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">Choose which assistant will handle these calls:</p>
             <Select value={selectedQueue} onValueChange={setSelectedQueue}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a queue" />
               </SelectTrigger>
               <SelectContent>
-                {queueOptions.map((queue: Assistant) => (
-                  <SelectItem key={queue.id} value={queue.id}>
-                    {queue.name}
-                  </SelectItem>
+                {queueOptions.map((q) => (
+                  <SelectItem key={q.id} value={q.id}>{q.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setQueueModalOpen(false)}
-            >
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setQueueModalOpen(false)}>Cancel</Button>
             <Button onClick={handleFinalSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <Loader className="animate-spin h-4 w-4" />
-                  Adding to Queue
-                </span>
-              ) : (
-                "Confirm"
-              )}
+              {isSubmitting ? <><Loader className="animate-spin h-4 w-4" /> Adding…</> : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
