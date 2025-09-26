@@ -47,8 +47,12 @@ export default function NavBar() {
     []
   );
 
+<<<<<<< HEAD
   // const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
   const logoSrc = "/logo.svg"
+=======
+  const logoSrc = theme === "dark" ? "/azmth-light.svg" : "/azmth.svg";
+>>>>>>> cb1198958f258e2df4dc0c2527d602cec008ae5a
 
   return (
     <nav className="w-full px-4 py-3 shadow-sm border-b flex items-center justify-between">
