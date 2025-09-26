@@ -1,17 +1,21 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import NavBar from "@/components/NavBar";
+
+export const queryClient = new QueryClient();
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const queryClient = new QueryClient();
-
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <div className="min-h-screen bg-[url('/mad_bg.jpg')] bg-cover bg-fixed">
+        <NavBar />
+        {children}
+      </div>
     </QueryClientProvider>
   );
 }

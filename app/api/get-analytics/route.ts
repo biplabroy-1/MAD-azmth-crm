@@ -67,8 +67,6 @@ export async function GET(request: NextRequest) {
       matchConditions.durationSeconds = { $gte: minDuration };
     }
 
-    console.log('Match conditions:', matchConditions);
-
     const result = await CallData.aggregate([
       // Match the calls for this user with filters
       { $match: matchConditions },

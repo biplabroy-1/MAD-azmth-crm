@@ -46,7 +46,7 @@ export default function CallRecordsContent() {
   const [assistantId, setAssistantId] = useState("all");
   const [phoneNumber, setPhoneNumber] = useState("all");
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const [open, setOpen] = useState(false);
 
   const { data, isFetching, refetch } = useQuery<ApiResponse>({
@@ -284,7 +284,7 @@ export default function CallRecordsContent() {
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm">
-                        {formatDate(call.startedAt || call.call.createdAt)}
+                        {formatDate(call.startedAt)}
                       </span>
                     </div>
                     <div className="flex items-center">

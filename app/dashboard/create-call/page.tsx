@@ -1,12 +1,10 @@
 import { Loading } from "@/components/utils";
-import { getAssistents } from "@/lib/vapiHelper";
+import { getAssistants } from "@/lib/vapiHelper";
 import { Suspense } from "react";
 import CreateCall from "./page-client";
 
-export const revalidate = 0;
-
 export default async function Page() {
-  const data = await getAssistents();
+  const data = await getAssistants();
   if (!data) {
     return null;
   }

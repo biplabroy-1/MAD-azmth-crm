@@ -25,5 +25,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-# clerk configuration (can include secrets)
+# clerk configuration
 /.clerk/
+package-lock.json
+
+# Sentry Config File
+.env.sentry-build-plugin
+<<<<<<< HEAD
+
+
+components/home-page
+=======
+>>>>>>> cb1198958f258e2df4dc0c2527d602cec008ae5a

@@ -1,5 +1,5 @@
 import type { Vapi } from "@vapi-ai/server-sdk";
-import type { CallData } from "./index";
+import { CallData } from "./index";
 
 export interface Customer {
   name: string;
@@ -8,32 +8,7 @@ export interface Customer {
 
 export interface Assistant extends Vapi.Assistant {
   userId?: string;
-}
-
-export interface AnalyticsCallRecord {
-  _id: string;
-  analysis?: {
-    successEvaluation?: string;
-    summary?: string;
-  };
-  startedAt?: string;
-  endedReason?: string;
-  durationSeconds?: number;
-  call?: {
-    id?: string;
-    type?: string;
-    phoneNumber?: string;
-  };
-  customer?: {
-    name?: string;
-    number?: string;
-  };
-  assistant?: {
-    id?: string;
-    name?: string;
-  };
-  transcript?: string;
-  recordingUrl?: string;
+  _id?: string
 }
 
 export interface OverviewData {
@@ -125,10 +100,9 @@ export interface WeeklySchedule {
   saturday: DailySchedule;
 }
 
-export interface Assistant {
-  id: string;
-  name?: string;
+export interface phoneNumber extends Vapi.TwilioPhoneNumber {
+  userId?: string;
+  _id: string
 }
-
 
 export type Schedule = Record<string, Record<string, ScheduleSlot>>;

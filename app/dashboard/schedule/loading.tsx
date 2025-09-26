@@ -1,47 +1,74 @@
+"use client";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { useId } from "react";
 
+const timeSlots = ["Morning", "Afternoon", "Evening"];
+const days = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 export default function Loading() {
   const id = useId();
+
   return (
-    <div className="space-y-6">
-      {/* Form header skeleton */}
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-full max-w-xs" />
-      </div>
-
-      {/* Table skeleton */}
-      <div className="space-y-3">
-        <Skeleton className="h-4 w-48" />
-        <div className="border rounded-md">
-          {/* Table header */}
-          <div className="flex items-center space-x-4 p-4 border-b">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-
-          {/* Table rows */}
-          {Array.from({ length: 7 }).map((_, index) => (
-            <div
-              key={`skeleton-row-${id}-${index}`}
-              className="flex items-center space-x-4 p-4 border-b last:border-b-0"
-            >
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-6 w-12" />
+    <div className="max-h-screen overflow-hidden flex flex-col p-2 sm:p-4 space-y-6">
+      {/* Scrollable table skeleton */}
+      <div className="flex-1 overflow-auto">
+        <div className="overflow-x-auto">
+          <div className="min-w-[850px] border rounded-md">
+            {/* Table header */}
+            <div className="flex border-b">
+              {/* Day column */}
+              <div className="w-28 p-3">
+                <Skeleton className="h-4 w-16" />
+              </div>
+              {/* Time slot headers */}
+              {timeSlots.map((slot, i) => (
+                <div
+                  key={`${id}-header-${i}`}
+                  className="flex-1 p-3 text-center"
+                >
+                  <Skeleton className="h-4 w-20 mx-auto" />
+                </div>
+              ))}
             </div>
-          ))}
+
+            {/* Table rows */}
+            {days.map((day, rowIdx) => (
+              <div
+                key={`${id}-row-${rowIdx}`}
+                className="flex border-b last:border-b-0 text-xs h-20"
+              >
+                {/* Day label cell */}
+                <div className="w-28 p-3 flex items-center">
+                  <Skeleton className="h-4 w-20" />
+                </div>
+
+                {/* Slots cells */}
+                {timeSlots.map((slot, colIdx) => (
+                  <div
+                    key={`${id}-cell-${rowIdx}-${colIdx}`}
+                    className="flex-1 p-2 flex flex-col sm:flex-row gap-2 items-center"
+                  >
+                    {/* Assistant select skeleton */}
+                    <Skeleton className="h-10 w-48 sm:w-56" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Save button skeleton */}
-      <Skeleton className="h-10 w-24" />
+      {/* Submit button skeleton */}
+      <Skeleton className="h-10 w-36" />
     </div>
   );
 }
