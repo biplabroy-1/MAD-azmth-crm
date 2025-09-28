@@ -14,8 +14,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { completeOnboarding } from "./actions";
-import { Sun, Moon, Phone, MessageCircle, Settings } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Phone,
+  MessageCircle,
+  Settings,
+  Info,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 
 // Prebuilt templates for AI calling agents
 const PREBUILT_TEMPLATES = [
@@ -80,6 +88,7 @@ export default function Onboarding() {
   const [endCallMessage, setEndCallMessage] = useState("");
   const [touched, setTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPromptGuide, setShowPromptGuide] = useState(false);
 
   const allFilled =
     systemPrompt.trim() && firstMessage.trim() && endCallMessage.trim();
@@ -120,6 +129,12 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground px-4">
+      {/* Logo */}
+      <div className="absolute top-4 left-4">
+        <Image src="/logo.svg" alt="Logo" width={120} height={40} />
+      </div>
+
+      {/* Top-right buttons */}
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <SignOutButton>
           <Button>Logout</Button>
@@ -129,11 +144,7 @@ export default function Onboarding() {
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
       </div>
 
@@ -146,7 +157,6 @@ export default function Onboarding() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Create New Voice AI Assistant Section */}
           <Card className="mb-8 border-2 border-primary/20">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
@@ -166,14 +176,13 @@ export default function Onboarding() {
                     <Button
                       key={template.id}
                       type="button"
-                      variant={
-                        selectedTemplate === template.id ? "default" : "outline"
-                      }
+                      variant={selectedTemplate === template.id ? "default" : "outline"}
                       onClick={() => handleTemplateSelect(template.id)}
-                      className={`border-2 transition-all duration-200 ${selectedTemplate === template.id
-                        ? "bg-primary text-primary-foreground shadow-lg scale-105"
-                        : "hover:border-primary/50 hover:bg-primary/5 hover:scale-105"
-                        }`}
+                      className={`border-2 transition-all duration-200 ${
+                        selectedTemplate === template.id
+                          ? "bg-primary text-primary-foreground shadow-lg scale-105"
+                          : "hover:border-primary/50 hover:bg-primary/5 hover:scale-105"
+                      }`}
                     >
                       {template.name}
                     </Button>
@@ -181,24 +190,42 @@ export default function Onboarding() {
                 </div>
                 {selectedTemplate && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Selected:{" "}
-                    {
-                      PREBUILT_TEMPLATES.find((t) => t.id === selectedTemplate)
-                        ?.description
-                    }
+                    Selected: {PREBUILT_TEMPLATES.find((t) => t.id === selectedTemplate)?.description}
                   </p>
                 )}
               </div>
 
-              {/* System Prompt */}
+              {/* System Prompt with helper & guide */}
               <div>
-                <label
-                  htmlFor="systemPrompt"
-                  className="mb-2 font-medium flex items-center gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  System Prompt
-                </label>
+                <div className="flex items-start justify-between">
+                  <label htmlFor="systemPrompt" className="mb-2 font-medium flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    System Prompt
+                  </label>
+                  <button
+                    type="button"
+                    className="flex items-center text-sm text-primary gap-1 hover:underline"
+                    onClick={() => setShowPromptGuide(!showPromptGuide)}
+                  >
+                    <Info className="h-4 w-4" />
+                    How to write a GREAT prompt
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Your AI agent will only be as smart and effective as the instructions you give it. Think of the system prompt as your agent’s job description plus personality guide. The clearer and more detailed you are, the better your agent will perform.
+                </p>
+                {showPromptGuide && (
+                  <div className="bg-primary/10 p-4 rounded-md text-sm space-y-2">
+                    <p>✅ Here’s how to write a GREAT prompt:</p>
+                    <ul className="list-disc ml-5 space-y-1">
+                      <li><strong>Define the Role:</strong> Clearly state who your agent is.</li>
+                      <li><strong>Set the Tone & Style:</strong> Decide how the agent should sound.</li>
+                      <li><strong>Outline Key Tasks:</strong> Be specific about what you want the agent to do.</li>
+                      <li><strong>Give Do’s & Don’ts:</strong> List what the agent should always do and what it should never do.</li>
+                      <li><strong>Provide Examples:</strong> Show sample responses for the agent to model.</li>
+                    </ul>
+                  </div>
+                )}
                 <Textarea
                   id="systemPrompt"
                   rows={6}
@@ -217,10 +244,7 @@ export default function Onboarding() {
 
               {/* First Message */}
               <div>
-                <label
-                  htmlFor="firstMessage"
-                  className="mb-2 font-medium flex items-center gap-2"
-                >
+                <label htmlFor="firstMessage" className="mb-2 font-medium flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
                   First Message
                 </label>
@@ -242,10 +266,7 @@ export default function Onboarding() {
 
               {/* End Call Message */}
               <div>
-                <label
-                  htmlFor="endCallMessage"
-                  className="mb-2 font-medium flex items-center gap-2"
-                >
+                <label htmlFor="endCallMessage" className="mb-2 font-medium flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   End Call Message
                 </label>
@@ -285,6 +306,7 @@ export default function Onboarding() {
               </div>
             </CardContent>
           </Card>
+
           {/* Validation Message */}
           {touched && !allFilled && (
             <div className="mt-4 text-center">
