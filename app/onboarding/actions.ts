@@ -24,18 +24,10 @@ export const completeOnboarding = async (formData: FormData) => {
         const client = await clerkClient();
 
         const userFromClerk = await client.users.getUser(userId);
-
-        const isGoogleLogin = userFromClerk.externalAccounts?.some(
-            (account) => account.provider === "oauth_google"
-        );
-
-        const firstName = isGoogleLogin
-            ? userFromClerk.firstName
-            : (userFromClerk.unsafeMetadata?.firstName as string);
-        const lastName = isGoogleLogin
-            ? userFromClerk.lastName
-            : (userFromClerk.unsafeMetadata?.lastName as string);
-
+        
+        const firstName = userFromClerk.firstName || userFromClerk.username || "assistant"
+        const lastName = userFromClerk.lastName
+        
         if (!firstName) {
             return { message: "First name is missing. Please update your profile." };
         }
