@@ -8,7 +8,7 @@ export interface Customer {
 
 export interface Assistant extends Vapi.Assistant {
   userId?: string;
-  _id?: string
+  _id?: string;
 }
 
 export interface OverviewData {
